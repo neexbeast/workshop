@@ -1,0 +1,185 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import Link from "next/link"
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { Button } from "@/components/ui/button"
+import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X } from "lucide-react"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ModeToggle } from "@/components/mode-toggle"
+import { cn } from "@/lib/utils"
+
+interface ClientLayoutProps {
+  children: React.ReactNode
+}
+
+export function ClientLayout({ children }: ClientLayoutProps) {
+  const { user, signOut } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      console.log("ClientLayout - Current user:", user)
+      if (!user) {
+        console.log("ClientLayout - No user, redirecting to login")
+        router.push("/login")
+      } else if (user.role !== "client") {
+        console.log("ClientLayout - User role not client:", user.role)
+        router.push("/login")
+      } else {
+        console.log("ClientLayout - User authorized:", user.role)
+      }
+    }
+  }, [user, router, mounted])
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/")
+  }
+
+  const navigation = [
+    { name: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
+    { name: "My Vehicles", href: "/client/vehicles", icon: Car },
+    { name: "Service History", href: "/client/service-history", icon: FileText },
+    { name: "Reminders", href: "/client/reminders", icon: Bell },
+    { name: "Settings", href: "/client/settings", icon: Settings },
+  ]
+
+  if (!mounted) {
+    return null
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar for desktop */}
+      <div className="hidden md:flex md:w-64 md:flex-col">
+        <div className="flex flex-col flex-grow border-r pt-5 pb-4 overflow-y-auto">
+          <div className="flex items-center flex-shrink-0 px-4">
+            <span className="font-bold text-xl">My Workshop</span>
+          </div>
+          <div className="mt-5 flex-grow flex flex-col">
+            <nav className="flex-1 px-2 space-y-1">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "mr-3 flex-shrink-0 h-5 w-5",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground",
+                      )}
+                    />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </nav>
+          </div>
+          <div className="flex-shrink-0 flex border-t p-4">
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+              </Avatar>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{user?.email}</p>
+                <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile sidebar */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild className="md:hidden">
+          <Button variant="outline" size="icon" className="absolute left-4 top-4 z-40">
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 p-0">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between px-4 h-16 border-b">
+              <span className="font-bold text-xl">My Workshop</span>
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close menu</span>
+              </Button>
+            </div>
+            <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
+                    )}
+                    onClick={() => setOpen(false)}
+                  >
+                    <item.icon
+                      className={cn(
+                        "mr-3 flex-shrink-0 h-5 w-5",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground",
+                      )}
+                    />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="flex-shrink-0 flex border-t p-4">
+              <div className="flex items-center">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+                </Avatar>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">{user?.email}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Main content */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="relative z-10 flex-shrink-0 flex h-16 bg-background border-b">
+          <div className="flex-1 flex justify-end px-4">
+            <div className="ml-4 flex items-center md:ml-6 space-x-2">
+              <ModeToggle />
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign out
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <main className="flex-1 relative overflow-y-auto focus:outline-none p-4 md:p-6">{children}</main>
+      </div>
+    </div>
+  )
+}
+

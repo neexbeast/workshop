@@ -7,43 +7,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Car, Wrench, Bell } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
+interface DashboardStats {
+  totalCustomers: number
+  totalVehicles: number
+  totalServices: number
+  totalReminders: number
+}
+
 export function DashboardStats() {
-  const { user } = useAuth()
-  const [stats, setStats] = useState({
-    customers: 0,
-    vehicles: 0,
-    services: 0,
-    reminders: 0,
+  const { user, firebaseUser } = useAuth()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCustomers: 0,
+    totalVehicles: 0,
+    totalServices: 0,
+    totalReminders: 0,
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user) return
-
-      setLoading(true)
       try {
-        // Fetch customers count
-        const customersResponse = await customersApi.getCustomers(user, "", 1, 1)
-        const customersCount = customersResponse.pagination?.total || 0
+        if (!user || !firebaseUser) return
 
-        // Fetch vehicles count
-        const vehiclesResponse = await vehiclesApi.getVehicles(user, "", "", 1, 1)
-        const vehiclesCount = vehiclesResponse.pagination?.total || 0
+        setLoading(true)
 
-        // Fetch services count
-        const servicesResponse = await servicesApi.getServices(user, "", "", 1, 1)
-        const servicesCount = servicesResponse.pagination?.total || 0
-
-        // Fetch upcoming reminders count
-        const remindersResponse = await remindersApi.getReminders(user, "", true, 1, 1)
-        const remindersCount = remindersResponse.pagination?.total || 0
+        const [customersResponse, vehiclesResponse, servicesResponse, remindersResponse] = await Promise.all([
+          customersApi.getCustomers(firebaseUser),
+          vehiclesApi.getVehicles(firebaseUser),
+          servicesApi.getServices(firebaseUser),
+          remindersApi.getReminders(firebaseUser, undefined, true),
+        ])
 
         setStats({
-          customers: customersCount,
-          vehicles: vehiclesCount,
-          services: servicesCount,
-          reminders: remindersCount,
+          totalCustomers: customersResponse.pagination.total,
+          totalVehicles: vehiclesResponse.pagination.total,
+          totalServices: servicesResponse.pagination.total,
+          totalReminders: remindersResponse.pagination.total,
         })
       } catch (error) {
         console.error("Error fetching dashboard stats:", error)
@@ -53,7 +52,7 @@ export function DashboardStats() {
     }
 
     fetchStats()
-  }, [user])
+  }, [user, firebaseUser])
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -64,10 +63,10 @@ export function DashboardStats() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.customers}</div>
+              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
               <p className="text-xs text-muted-foreground">Registered customers</p>
             </>
           )}
@@ -75,15 +74,15 @@ export function DashboardStats() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Vehicles Serviced</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
           <Car className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.vehicles}</div>
+              <div className="text-2xl font-bold">{stats.totalVehicles}</div>
               <p className="text-xs text-muted-foreground">Registered vehicles</p>
             </>
           )}
@@ -91,15 +90,15 @@ export function DashboardStats() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Services Completed</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Services</CardTitle>
           <Wrench className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.services}</div>
+              <div className="text-2xl font-bold">{stats.totalServices}</div>
               <p className="text-xs text-muted-foreground">Total services performed</p>
             </>
           )}
@@ -112,10 +111,10 @@ export function DashboardStats() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.reminders}</div>
+              <div className="text-2xl font-bold">{stats.totalReminders}</div>
               <p className="text-xs text-muted-foreground">Due in the next 30 days</p>
             </>
           )}

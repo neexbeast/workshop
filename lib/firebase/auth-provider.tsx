@@ -20,6 +20,7 @@ export interface User extends FirebaseUser {
 
 interface AuthContextType {
   user: User | null
+  firebaseUser: FirebaseUser | null
   loading: boolean
   error: string | null
   signIn: (email: string, password: string) => Promise<User>
@@ -48,100 +49,102 @@ const createDisplayNameWithRole = (role: UserRole): string => {
   return `${role}:user`
 }
 
-const enhanceUserWithRole = (firebaseUser: FirebaseUser): User => {
+const enhanceUserWithRole = (firebaseUser: FirebaseUser | null): User | null => {
+  if (!firebaseUser) return null
   const role = getRoleFromDisplayName(firebaseUser.displayName)
   return { ...firebaseUser, role } as User
 }
 
-// Default context value with actual implementations
-const defaultContextValue: AuthContextType = {
+export const AuthContext = createContext<AuthContextType>({
   user: null,
+  firebaseUser: null,
   loading: true,
   error: null,
-  signIn: async (email: string, password: string) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
-    return enhanceUserWithRole(userCredential.user)
+  signIn: async () => {
+    throw new Error("AuthContext not initialized")
   },
-  signUp: async (email: string, password: string, role: UserRole) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-    await updateProfile(userCredential.user, {
-      displayName: createDisplayNameWithRole(role),
-    })
-    return { ...userCredential.user, role } as User
+  signUp: async () => {
+    throw new Error("AuthContext not initialized")
   },
   signOut: async () => {
-    await firebaseSignOut(auth)
+    throw new Error("AuthContext not initialized")
   },
   refreshToken: async () => {
-    const currentUser = auth.currentUser
-    if (!currentUser) return null
-    return await currentUser.getIdToken(true)
+    throw new Error("AuthContext not initialized")
   },
-}
-
-export const AuthContext = createContext<AuthContextType>(defaultContextValue)
+})
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
 
   const refreshToken = useCallback(async () => {
     try {
-      const currentUser = auth.currentUser
-      if (!currentUser) return null
-      return await currentUser.getIdToken(true)
+      if (!firebaseUser) return null
+      return await firebaseUser.getIdToken(true)
     } catch (err) {
       console.error("Token refresh error:", err)
       return null
     }
-  }, [])
+  }, [firebaseUser])
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          console.log("Auth state changed: User is signed in", firebaseUser)
-          console.log("User display name:", firebaseUser.displayName)
-          const userWithRole = enhanceUserWithRole(firebaseUser)
-          console.log("Enhanced user with role:", userWithRole.role)
-          setUser(userWithRole)
-        } else {
-          console.log("Auth state changed: User is signed out")
-          setUser(null)
-        }
-      } catch (err) {
-        console.error("Error in auth state change:", err)
-        setError(err instanceof Error ? err.message : "Authentication error")
-      } finally {
+    console.log("Setting up auth state listener...")
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (newFirebaseUser) => {
+        console.log("Auth state changed:", newFirebaseUser ? "User present" : "No user")
+        setFirebaseUser(newFirebaseUser)
+        const enhancedUser = enhanceUserWithRole(newFirebaseUser)
+        console.log("Enhanced user:", enhancedUser)
+        setUser(enhancedUser)
         setLoading(false)
+        setInitialized(true)
+      },
+      (error) => {
+        console.error("Auth state change error:", error)
+        setError(error.message)
+        setLoading(false)
+        setInitialized(true)
       }
-    })
+    )
 
-    return () => unsubscribe()
+    return () => {
+      console.log("Cleaning up auth state listener...")
+      unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
       setError(null)
+      setLoading(true)
       console.log("Attempting to sign in...")
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      console.log("Sign in successful")
+      setFirebaseUser(userCredential.user)
       const userWithRole = enhanceUserWithRole(userCredential.user)
+      if (!userWithRole) throw new Error("Failed to enhance user with role")
       return userWithRole
     } catch (err) {
       console.error("Sign in error:", err)
       const error = err instanceof Error ? err.message : "Sign in failed"
       setError(error)
       throw new Error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const signUp = async (email: string, password: string, role: UserRole) => {
     try {
       setError(null)
+      setLoading(true)
       console.log("Attempting to create new user...")
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      setFirebaseUser(userCredential.user)
 
       await updateProfile(userCredential.user, {
         displayName: createDisplayNameWithRole(role),
@@ -155,25 +158,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const error = err instanceof Error ? err.message : "Sign up failed"
       setError(error)
       throw new Error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const signOut = async () => {
     try {
       setError(null)
+      setLoading(true)
       await firebaseSignOut(auth)
+      setFirebaseUser(null)
+      setUser(null)
     } catch (err) {
       console.error("Sign out error:", err)
       const error = err instanceof Error ? err.message : "Sign out failed"
       setError(error)
       throw new Error(error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  // Don't render anything until the initial auth state is loaded
+  if (!initialized) {
+    return null
   }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        firebaseUser,
         loading,
         error,
         signIn,

@@ -1,16 +1,16 @@
-import type { User } from "@/lib/firebase/auth-provider"
+import { type User as FirebaseUser } from "firebase/auth"
 
 // Base URL for API requests
 const API_BASE_URL = "/api"
 
 // Helper function to get the auth token from the current user
-async function getAuthToken(user: User | null): Promise<string | null> {
+async function getAuthToken(user: FirebaseUser | null): Promise<string | null> {
   if (!user) return null
   return await user.getIdToken()
 }
 
 // Helper function to build headers with auth token
-async function buildHeaders(user: User | null): Promise<HeadersInit> {
+async function buildHeaders(user: FirebaseUser | null): Promise<HeadersInit> {
   const token = await getAuthToken(user)
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -24,7 +24,7 @@ async function buildHeaders(user: User | null): Promise<HeadersInit> {
 }
 
 // Generic fetch function with authentication
-async function fetchWithAuth<T>(url: string, options: RequestInit, user: User | null): Promise<T> {
+async function fetchWithAuth<T>(url: string, options: RequestInit, user: FirebaseUser | null): Promise<T> {
   const headers = await buildHeaders(user)
   const response = await fetch(url, {
     ...options,
@@ -44,20 +44,24 @@ async function fetchWithAuth<T>(url: string, options: RequestInit, user: User | 
 
 // API client for customers
 export const customersApi = {
-  getCustomers: async (user: User | null, search?: string, page = 1, limit = 50) => {
+  getCustomers: async (user: FirebaseUser | null, search?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (page) queryParams.append("page", page.toString())
     if (limit) queryParams.append("limit", limit.toString())
 
-    return fetchWithAuth(`${API_BASE_URL}/customers?${queryParams.toString()}`, { method: "GET" }, user)
+    return fetchWithAuth<{ customers: any[]; pagination: { total: number; page: number; limit: number; pages: number } }>(
+      `${API_BASE_URL}/customers?${queryParams.toString()}`,
+      { method: "GET" },
+      user
+    )
   },
 
-  getCustomer: async (user: User | null, id: string) => {
+  getCustomer: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/customers/${id}`, { method: "GET" }, user)
   },
 
-  createCustomer: async (user: User | null, customerData: any) => {
+  createCustomer: async (user: FirebaseUser | null, customerData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/customers`,
       {
@@ -68,7 +72,7 @@ export const customersApi = {
     )
   },
 
-  updateCustomer: async (user: User | null, id: string, customerData: any) => {
+  updateCustomer: async (user: FirebaseUser | null, id: string, customerData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/customers/${id}`,
       {
@@ -79,28 +83,32 @@ export const customersApi = {
     )
   },
 
-  deleteCustomer: async (user: User | null, id: string) => {
+  deleteCustomer: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/customers/${id}`, { method: "DELETE" }, user)
   },
 }
 
 // API client for vehicles
 export const vehiclesApi = {
-  getVehicles: async (user: User | null, search?: string, customerId?: string, page = 1, limit = 50) => {
+  getVehicles: async (user: FirebaseUser | null, search?: string, customerId?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (customerId) queryParams.append("customerId", customerId)
     if (page) queryParams.append("page", page.toString())
     if (limit) queryParams.append("limit", limit.toString())
 
-    return fetchWithAuth(`${API_BASE_URL}/vehicles?${queryParams.toString()}`, { method: "GET" }, user)
+    return fetchWithAuth<{ vehicles: any[]; pagination: { total: number; page: number; limit: number; pages: number } }>(
+      `${API_BASE_URL}/vehicles?${queryParams.toString()}`,
+      { method: "GET" },
+      user
+    )
   },
 
-  getVehicle: async (user: User | null, id: string) => {
+  getVehicle: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/vehicles/${id}`, { method: "GET" }, user)
   },
 
-  createVehicle: async (user: User | null, vehicleData: any) => {
+  createVehicle: async (user: FirebaseUser | null, vehicleData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/vehicles`,
       {
@@ -111,7 +119,7 @@ export const vehiclesApi = {
     )
   },
 
-  updateVehicle: async (user: User | null, id: string, vehicleData: any) => {
+  updateVehicle: async (user: FirebaseUser | null, id: string, vehicleData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/vehicles/${id}`,
       {
@@ -122,28 +130,32 @@ export const vehiclesApi = {
     )
   },
 
-  deleteVehicle: async (user: User | null, id: string) => {
+  deleteVehicle: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/vehicles/${id}`, { method: "DELETE" }, user)
   },
 }
 
 // API client for services
 export const servicesApi = {
-  getServices: async (user: User | null, search?: string, vehicleId?: string, page = 1, limit = 50) => {
+  getServices: async (user: FirebaseUser | null, search?: string, vehicleId?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (vehicleId) queryParams.append("vehicleId", vehicleId)
     if (page) queryParams.append("page", page.toString())
     if (limit) queryParams.append("limit", limit.toString())
 
-    return fetchWithAuth(`${API_BASE_URL}/services?${queryParams.toString()}`, { method: "GET" }, user)
+    return fetchWithAuth<{ services: any[]; pagination: { total: number; page: number; limit: number; pages: number } }>(
+      `${API_BASE_URL}/services?${queryParams.toString()}`,
+      { method: "GET" },
+      user
+    )
   },
 
-  getService: async (user: User | null, id: string) => {
+  getService: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/services/${id}`, { method: "GET" }, user)
   },
 
-  createService: async (user: User | null, serviceData: any) => {
+  createService: async (user: FirebaseUser | null, serviceData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/services`,
       {
@@ -154,7 +166,7 @@ export const servicesApi = {
     )
   },
 
-  updateService: async (user: User | null, id: string, serviceData: any) => {
+  updateService: async (user: FirebaseUser | null, id: string, serviceData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/services/${id}`,
       {
@@ -165,28 +177,32 @@ export const servicesApi = {
     )
   },
 
-  deleteService: async (user: User | null, id: string) => {
+  deleteService: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/services/${id}`, { method: "DELETE" }, user)
   },
 }
 
 // API client for reminders
 export const remindersApi = {
-  getReminders: async (user: User | null, vehicleId?: string, upcoming = false, page = 1, limit = 50) => {
+  getReminders: async (user: FirebaseUser | null, vehicleId?: string, upcoming = false, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (vehicleId) queryParams.append("vehicleId", vehicleId)
     if (upcoming) queryParams.append("upcoming", "true")
     if (page) queryParams.append("page", page.toString())
     if (limit) queryParams.append("limit", limit.toString())
 
-    return fetchWithAuth(`${API_BASE_URL}/reminders?${queryParams.toString()}`, { method: "GET" }, user)
+    return fetchWithAuth<{ reminders: any[]; pagination: { total: number; page: number; limit: number; pages: number } }>(
+      `${API_BASE_URL}/reminders?${queryParams.toString()}`,
+      { method: "GET" },
+      user
+    )
   },
 
-  getReminder: async (user: User | null, id: string) => {
+  getReminder: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/reminders/${id}`, { method: "GET" }, user)
   },
 
-  createReminder: async (user: User | null, reminderData: any) => {
+  createReminder: async (user: FirebaseUser | null, reminderData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/reminders`,
       {
@@ -197,7 +213,7 @@ export const remindersApi = {
     )
   },
 
-  updateReminder: async (user: User | null, id: string, reminderData: any) => {
+  updateReminder: async (user: FirebaseUser | null, id: string, reminderData: any) => {
     return fetchWithAuth(
       `${API_BASE_URL}/reminders/${id}`,
       {
@@ -208,11 +224,11 @@ export const remindersApi = {
     )
   },
 
-  deleteReminder: async (user: User | null, id: string) => {
+  deleteReminder: async (user: FirebaseUser | null, id: string) => {
     return fetchWithAuth(`${API_BASE_URL}/reminders/${id}`, { method: "DELETE" }, user)
   },
 
-  sendReminders: async (user: User | null) => {
+  sendReminders: async (user: FirebaseUser | null) => {
     return fetchWithAuth(`${API_BASE_URL}/reminders/send`, { method: "POST" }, user)
   },
 }

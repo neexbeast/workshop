@@ -18,7 +18,7 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
-  const { user, signOut } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -29,23 +29,32 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }, [])
 
   useEffect(() => {
-    if (mounted) {
-      console.log("AdminLayout - Current user:", user)
-      if (!user) {
-        console.log("AdminLayout - No user, redirecting to login")
-        router.push("/login")
-      } else if (user.role !== "admin" && user.role !== "worker") {
-        console.log("AdminLayout - User role not admin/worker:", user.role)
-        router.push("/login")
-      } else {
-        console.log("AdminLayout - User authorized:", user.role)
-      }
+    if (!mounted || loading) return
+
+    console.log("AdminLayout - Auth state:", { user, loading })
+    
+    if (!user) {
+      console.log("AdminLayout - No user, redirecting to login")
+      router.push("/login")
+      return
     }
-  }, [user, router, mounted])
+    
+    if (user.role !== "admin" && user.role !== "worker") {
+      console.log("AdminLayout - User role not admin/worker:", user.role)
+      router.push("/login")
+      return
+    }
+    
+    console.log("AdminLayout - User authorized:", user.role)
+  }, [user, loading, router, mounted])
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/")
+    try {
+      await signOut()
+      router.push("/")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
   }
 
   const navigation = [
@@ -57,7 +66,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ]
 
-  if (!mounted) {
+  // Don't render anything while loading or not mounted
+  if (!mounted || loading) {
+    return null
+  }
+
+  // Don't render the layout if user is not authenticated or not authorized
+  if (!user || (user.role !== "admin" && user.role !== "worker")) {
     return null
   }
 

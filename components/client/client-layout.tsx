@@ -18,7 +18,7 @@ interface ClientLayoutProps {
 }
 
 export function ClientLayout({ children }: ClientLayoutProps) {
-  const { user, signOut } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -29,23 +29,32 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   }, [])
 
   useEffect(() => {
-    if (mounted) {
-      console.log("ClientLayout - Current user:", user)
-      if (!user) {
-        console.log("ClientLayout - No user, redirecting to login")
-        router.push("/login")
-      } else if (user.role !== "client") {
-        console.log("ClientLayout - User role not client:", user.role)
-        router.push("/login")
-      } else {
-        console.log("ClientLayout - User authorized:", user.role)
-      }
+    if (!mounted || loading) return
+
+    console.log("ClientLayout - Auth state:", { user, loading })
+    
+    if (!user) {
+      console.log("ClientLayout - No user, redirecting to login")
+      router.push("/login")
+      return
     }
-  }, [user, router, mounted])
+    
+    if (user.role !== "client") {
+      console.log("ClientLayout - User role not client:", user.role)
+      router.push("/login")
+      return
+    }
+    
+    console.log("ClientLayout - User authorized:", user.role)
+  }, [user, loading, router, mounted])
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/")
+    try {
+      await signOut()
+      router.push("/")
+    } catch (error) {
+      console.error("Sign out error:", error)
+    }
   }
 
   const navigation = [
@@ -56,7 +65,13 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     { name: "Settings", href: "/client/settings", icon: Settings },
   ]
 
-  if (!mounted) {
+  // Don't render anything while loading or not mounted
+  if (!mounted || loading) {
+    return null
+  }
+
+  // Don't render the layout if user is not authenticated or not authorized
+  if (!user || user.role !== "client") {
     return null
   }
 

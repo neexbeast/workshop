@@ -26,6 +26,7 @@ export interface Vehicle {
   licensePlate?: string
   customerId: string // Reference to the customer who owns this vehicle
   mileage: number
+  lastService?: string // Date of the last service
   createdAt: Date
   updatedAt: Date
 }

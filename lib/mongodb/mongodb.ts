@@ -12,7 +12,7 @@ interface CachedConnection {
 }
 
 // Cache the MongoDB connection to avoid creating new connections for each request
-let cached: CachedConnection = global.mongo
+let cached: CachedConnection = global.mongo as CachedConnection
 
 if (!cached) {
   cached = global.mongo = { client: null, db: null }
@@ -20,6 +20,7 @@ if (!cached) {
 
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   if (cached.client && cached.db) {
+    console.log("Using cached database connection")
     return { client: cached.client, db: cached.db }
   }
 
@@ -31,18 +32,24 @@ export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db
     throw new Error("Please define the MONGODB_DB environment variable")
   }
 
-  const opts = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+  console.log("Connecting to MongoDB...", MONGODB_URI)
+  
+  try {
+    const client = new MongoClient(MONGODB_URI)
+    await client.connect()
+    const db = client.db(MONGODB_DB)
+
+    // Test the connection
+    await db.command({ ping: 1 })
+    console.log("Successfully connected to MongoDB.")
+
+    cached.client = client
+    cached.db = db
+
+    return { client, db }
+  } catch (error) {
+    console.error("Failed to connect to MongoDB:", error)
+    throw error
   }
-
-  const client = new MongoClient(MONGODB_URI)
-  await client.connect()
-  const db = client.db(MONGODB_DB)
-
-  cached.client = client
-  cached.db = db
-
-  return { client, db }
 }
 

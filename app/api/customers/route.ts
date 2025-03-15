@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
     // Connect to the database
     const { db } = await connectToDatabase()
 
+    console.log("db", db)
+
     // Get query parameters
     const url = new URL(req.url)
     const search = url.searchParams.get("search") || ""

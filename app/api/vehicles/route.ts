@@ -13,7 +13,10 @@ async function verifyAuthToken(req: NextRequest) {
 
     const token = authHeader.split("Bearer ")[1]
     const decodedToken = await getAuth().verifyIdToken(token)
-    return decodedToken
+
+    // Get role from custom claims
+    const role = decodedToken.role || "client"
+    return { ...decodedToken, role }
   } catch (error) {
     console.error("Error verifying auth token:", error)
     return null
@@ -31,6 +34,9 @@ export async function GET(req: NextRequest) {
 
     // Connect to the database
     const { db } = await connectToDatabase()
+
+    const allVehicles = await db.collection("vehicles").find({}).toArray()
+    console.log("All vehicles:", allVehicles);
 
     // Get query parameters
     const url = new URL(req.url)
@@ -92,6 +98,8 @@ export async function GET(req: NextRequest) {
 
     // Get total count for pagination
     const total = await db.collection("vehicles").countDocuments(query)
+
+
 
     return NextResponse.json({
       vehicles,

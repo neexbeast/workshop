@@ -50,17 +50,17 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
   const [isLookingUpVIN, setIsLookingUpVIN] = useState(false)
   const [customers, setCustomers] = useState<any[]>([])
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false)
-  const { user } = useAuth()
+  const auth = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
     const fetchCustomers = async () => {
-      if (!user) return
+      if (!auth.user) return
 
       setIsLoadingCustomers(true)
       try {
-        const response = await customersApi.getCustomers(user)
+        const response = await customersApi.getCustomers({ firebaseUser: auth.firebaseUser })
         setCustomers(response.customers || [])
       } catch (err) {
         console.error("Error fetching customers:", err)
@@ -70,7 +70,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
     }
 
     fetchCustomers()
-  }, [user])
+  }, [auth.user, auth.firebaseUser])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -125,13 +125,13 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
 
     try {
       if (isEdit && vehicle) {
-        await vehiclesApi.updateVehicle(user, vehicle.id, formData)
+        await vehiclesApi.updateVehicle({ firebaseUser: auth.firebaseUser }, vehicle.id, formData)
         toast({
           title: "Vehicle updated",
           description: "Vehicle information has been updated successfully.",
         })
       } else {
-        await vehiclesApi.createVehicle(user, formData)
+        await vehiclesApi.createVehicle({ firebaseUser: auth.firebaseUser }, formData)
         toast({
           title: "Vehicle added",
           description: "New vehicle has been added successfully.",

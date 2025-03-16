@@ -49,9 +49,13 @@ const createDisplayNameWithRole = (role: UserRole): string => {
   return `${role}:user`
 }
 
-const enhanceUserWithRole = (firebaseUser: FirebaseUser | null): User | null => {
+const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<User | null> => {
   if (!firebaseUser) return null
-  const role = getRoleFromDisplayName(firebaseUser.displayName)
+
+  // Get the ID token result which includes custom claims
+  const idTokenResult = await firebaseUser.getIdTokenResult()
+  const role = (idTokenResult.claims.role as UserRole) || "client"
+
   return { ...firebaseUser, role } as User
 }
 
@@ -95,10 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Setting up auth state listener...")
     const unsubscribe = onAuthStateChanged(
       auth,
-      (newFirebaseUser) => {
+      async (newFirebaseUser) => {
         console.log("Auth state changed:", newFirebaseUser ? "User present" : "No user")
         setFirebaseUser(newFirebaseUser)
-        const enhancedUser = enhanceUserWithRole(newFirebaseUser)
+        const enhancedUser = await enhanceUserWithRole(newFirebaseUser)
         console.log("Enhanced user:", enhancedUser)
         setUser(enhancedUser)
         setLoading(false)
@@ -125,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Attempting to sign in...")
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       setFirebaseUser(userCredential.user)
-      const userWithRole = enhanceUserWithRole(userCredential.user)
+      const userWithRole = await enhanceUserWithRole(userCredential.user)
       if (!userWithRole) throw new Error("Failed to enhance user with role")
       return userWithRole
     } catch (err) {
@@ -146,12 +150,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       setFirebaseUser(userCredential.user)
 
-      await updateProfile(userCredential.user, {
-        displayName: createDisplayNameWithRole(role),
+      // Set custom claims via API
+      const response = await fetch("/api/auth/set-role", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uid: userCredential.user.uid,
+          role,
+        }),
       })
 
-      console.log("User created with role:", role)
-      const userWithRole = { ...userCredential.user, role } as User
+      if (!response.ok) {
+        throw new Error("Failed to set user role")
+      }
+
+      // Force token refresh to get the new claims
+      await userCredential.user.getIdToken(true)
+
+      // Get the enhanced user with the new role
+      const userWithRole = await enhanceUserWithRole(userCredential.user)
+      if (!userWithRole) throw new Error("Failed to enhance user with role")
       return userWithRole
     } catch (err) {
       console.error("Sign up error:", err)

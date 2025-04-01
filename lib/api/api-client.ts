@@ -6,7 +6,7 @@ import type { User as FirebaseUser } from "firebase/auth"
 const API_BASE_URL = "/api"
 
 // Helper function to get the auth token from the current user
-async function getAuthToken(user: { firebaseUser: FirebaseUser | null } | FirebaseUser | null): Promise<string | null> {
+async function getAuthToken(user: { firebaseUser: FirebaseUser | null } | FirebaseUser | null | { getIdToken: () => Promise<string> }): Promise<string | null> {
   if (!user) return null
   
   // If the user object has a firebaseUser property, use that
@@ -14,12 +14,18 @@ async function getAuthToken(user: { firebaseUser: FirebaseUser | null } | Fireba
     return await user.firebaseUser.getIdToken()
   }
   
-  // Otherwise, assume it's a Firebase user object directly
-  return await user.getIdToken()
+  // If the user object has getIdToken method, use that
+  if ('getIdToken' in user) {
+    return await user.getIdToken()
+  }
+  
+  return null
 }
 
+type AuthUserType = { firebaseUser: FirebaseUser | null } | FirebaseUser | null | { getIdToken: () => Promise<string> }
+
 // Helper function to build headers with auth token
-async function buildHeaders(user: { firebaseUser: FirebaseUser | null } | FirebaseUser | null): Promise<HeadersInit> {
+async function buildHeaders(user: AuthUserType): Promise<HeadersInit> {
   const token = await getAuthToken(user)
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -33,7 +39,7 @@ async function buildHeaders(user: { firebaseUser: FirebaseUser | null } | Fireba
 }
 
 // Generic fetch function with authentication
-async function fetchWithAuth<T>(url: string, options: RequestInit, user: { firebaseUser: FirebaseUser | null } | FirebaseUser | null): Promise<T> {
+async function fetchWithAuth<T>(url: string, options: RequestInit, user: AuthUserType): Promise<T> {
   const headers = await buildHeaders(user)
   const response = await fetch(url, {
     ...options,
@@ -53,7 +59,7 @@ async function fetchWithAuth<T>(url: string, options: RequestInit, user: { fireb
 
 // API client for customers
 export const customersApi = {
-  getCustomers: async (user: { firebaseUser: FirebaseUser | null } | null, search?: string, page = 1, limit = 50) => {
+  getCustomers: async (user: AuthUserType, search?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (page) queryParams.append("page", page.toString())
@@ -66,7 +72,7 @@ export const customersApi = {
     )
   },
 
-  getCustomer: async (user: { firebaseUser: FirebaseUser | null } | null, id: string) => {
+  getCustomer: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ customer: Customer }>(
       `${API_BASE_URL}/customers/${id}`,
       { method: "GET" },
@@ -74,7 +80,7 @@ export const customersApi = {
     )
   },
 
-  createCustomer: async (user: { firebaseUser: FirebaseUser | null } | null, customerData: Omit<Customer, "id" | "createdAt" | "updatedAt">) => {
+  createCustomer: async (user: AuthUserType, customerData: Omit<Customer, "id" | "createdAt" | "updatedAt">) => {
     return fetchWithAuth<{ customer: Customer }>(
       `${API_BASE_URL}/customers`,
       {
@@ -85,7 +91,7 @@ export const customersApi = {
     )
   },
 
-  updateCustomer: async (user: { firebaseUser: FirebaseUser | null } | null, id: string, customerData: Partial<Omit<Customer, "id" | "createdAt" | "updatedAt">>) => {
+  updateCustomer: async (user: AuthUserType, id: string, customerData: Partial<Omit<Customer, "id" | "createdAt" | "updatedAt">>) => {
     return fetchWithAuth<{ customer: Customer }>(
       `${API_BASE_URL}/customers/${id}`,
       {
@@ -96,7 +102,7 @@ export const customersApi = {
     )
   },
 
-  deleteCustomer: async (user: { firebaseUser: FirebaseUser | null } | null, id: string) => {
+  deleteCustomer: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ success: true }>(
       `${API_BASE_URL}/customers/${id}`,
       { method: "DELETE" },
@@ -107,7 +113,7 @@ export const customersApi = {
 
 // API client for vehicles
 export const vehiclesApi = {
-  getVehicles: async (user: { firebaseUser: FirebaseUser | null } | null, search?: string, customerId?: string, page = 1, limit = 50) => {
+  getVehicles: async (user: AuthUserType, search?: string, customerId?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (customerId) queryParams.append("customerId", customerId)
@@ -121,7 +127,7 @@ export const vehiclesApi = {
     )
   },
 
-  getVehicle: async (user: { firebaseUser: FirebaseUser | null } | null, id: string) => {
+  getVehicle: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ vehicle: Vehicle }>(
       `${API_BASE_URL}/vehicles/${id}`,
       { method: "GET" },
@@ -129,7 +135,7 @@ export const vehiclesApi = {
     )
   },
 
-  createVehicle: async (user: { firebaseUser: FirebaseUser | null } | null, vehicleData: Omit<Vehicle, "id" | "createdAt" | "updatedAt">) => {
+  createVehicle: async (user: AuthUserType, vehicleData: Omit<Vehicle, "id" | "createdAt" | "updatedAt">) => {
     return fetchWithAuth<{ vehicle: Vehicle }>(
       `${API_BASE_URL}/vehicles`,
       {
@@ -140,7 +146,7 @@ export const vehiclesApi = {
     )
   },
 
-  updateVehicle: async (user: { firebaseUser: FirebaseUser | null } | null, id: string, vehicleData: Partial<Omit<Vehicle, "id" | "createdAt" | "updatedAt">>) => {
+  updateVehicle: async (user: AuthUserType, id: string, vehicleData: Partial<Omit<Vehicle, "id" | "createdAt" | "updatedAt">>) => {
     return fetchWithAuth<{ vehicle: Vehicle }>(
       `${API_BASE_URL}/vehicles/${id}`,
       {
@@ -151,7 +157,7 @@ export const vehiclesApi = {
     )
   },
 
-  deleteVehicle: async (user: { firebaseUser: FirebaseUser | null } | null, id: string) => {
+  deleteVehicle: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ success: true }>(
       `${API_BASE_URL}/vehicles/${id}`,
       { method: "DELETE" },
@@ -162,7 +168,7 @@ export const vehiclesApi = {
 
 // API client for services
 export const servicesApi = {
-  getServices: async (user: { firebaseUser: FirebaseUser | null } | null, search?: string, vehicleId?: string, page = 1, limit = 50) => {
+  getServices: async (user: AuthUserType, search?: string, vehicleId?: string, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (search) queryParams.append("search", search)
     if (vehicleId) queryParams.append("vehicleId", vehicleId)
@@ -176,7 +182,7 @@ export const servicesApi = {
     )
   },
 
-  getService: async (user: { firebaseUser: FirebaseUser | null } | null, id: string) => {
+  getService: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ service: Service }>(
       `${API_BASE_URL}/services/${id}`,
       { method: "GET" },
@@ -184,7 +190,7 @@ export const servicesApi = {
     )
   },
 
-  createService: async (user: { firebaseUser: AuthUser | null } | null, serviceData: Omit<Service, "id" | "createdAt" | "updatedAt">) => {
+  createService: async (user: AuthUserType, serviceData: Omit<Service, "id" | "createdAt" | "updatedAt">) => {
     return fetchWithAuth<{ service: Service }>(
       `${API_BASE_URL}/services`,
       {
@@ -195,7 +201,7 @@ export const servicesApi = {
     )
   },
 
-  updateService: async (user: { firebaseUser: AuthUser | null } | null, id: string, serviceData: Partial<Omit<Service, "id" | "createdAt" | "updatedAt">>) => {
+  updateService: async (user: AuthUserType, id: string, serviceData: Partial<Omit<Service, "id" | "createdAt" | "updatedAt">>) => {
     return fetchWithAuth<{ service: Service }>(
       `${API_BASE_URL}/services/${id}`,
       {
@@ -206,7 +212,7 @@ export const servicesApi = {
     )
   },
 
-  deleteService: async (user: { firebaseUser: AuthUser | null } | null, id: string) => {
+  deleteService: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ success: true }>(
       `${API_BASE_URL}/services/${id}`,
       { method: "DELETE" },
@@ -217,7 +223,7 @@ export const servicesApi = {
 
 // API client for reminders
 export const remindersApi = {
-  getReminders: async (user: { firebaseUser: AuthUser | null } | null, vehicleId?: string, upcoming = false, page = 1, limit = 50) => {
+  getReminders: async (user: AuthUserType, vehicleId?: string, upcoming = false, page = 1, limit = 50) => {
     const queryParams = new URLSearchParams()
     if (vehicleId) queryParams.append("vehicleId", vehicleId)
     if (upcoming) queryParams.append("upcoming", "true")
@@ -231,7 +237,7 @@ export const remindersApi = {
     )
   },
 
-  getReminder: async (user: { firebaseUser: AuthUser | null } | null, id: string) => {
+  getReminder: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ reminder: Reminder }>(
       `${API_BASE_URL}/reminders/${id}`,
       { method: "GET" },
@@ -239,7 +245,7 @@ export const remindersApi = {
     )
   },
 
-  createReminder: async (user: { firebaseUser: AuthUser | null } | null, reminderData: Omit<Reminder, "id" | "createdAt" | "updatedAt">) => {
+  createReminder: async (user: AuthUserType, reminderData: Omit<Reminder, "id" | "createdAt" | "updatedAt">) => {
     return fetchWithAuth<{ reminder: Reminder }>(
       `${API_BASE_URL}/reminders`,
       {
@@ -250,7 +256,7 @@ export const remindersApi = {
     )
   },
 
-  updateReminder: async (user: { firebaseUser: AuthUser | null } | null, id: string, reminderData: Partial<Omit<Reminder, "id" | "createdAt" | "updatedAt">>) => {
+  updateReminder: async (user: AuthUserType, id: string, reminderData: Partial<Omit<Reminder, "id" | "createdAt" | "updatedAt">>) => {
     return fetchWithAuth<{ reminder: Reminder }>(
       `${API_BASE_URL}/reminders/${id}`,
       {
@@ -261,7 +267,7 @@ export const remindersApi = {
     )
   },
 
-  deleteReminder: async (user: { firebaseUser: AuthUser | null } | null, id: string) => {
+  deleteReminder: async (user: AuthUserType, id: string) => {
     return fetchWithAuth<{ success: true }>(
       `${API_BASE_URL}/reminders/${id}`,
       { method: "DELETE" },
@@ -269,7 +275,7 @@ export const remindersApi = {
     )
   },
 
-  sendReminders: async (user: { firebaseUser: AuthUser | null } | null) => {
+  sendReminders: async (user: AuthUserType) => {
     return fetchWithAuth<{ message: string; count: number }>(
       `${API_BASE_URL}/reminders/send`,
       { method: "POST" },

@@ -2,6 +2,11 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb/mongodb"
 import { getAuth } from "firebase-admin/auth"
 import { ObjectId } from "mongodb"
+import type { Vehicle } from "@/lib/mongodb/models"
+
+interface VehicleDocument extends Omit<Vehicle, "id"> {
+  _id: ObjectId
+}
 
 // Middleware to verify Firebase token
 async function verifyAuthToken(req: NextRequest) {
@@ -47,7 +52,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build the query
-    const query: any = {}
+    const query: Record<string, any> = {}
 
     // If search parameter is provided, search in make, model, and VIN
     if (search) {
@@ -94,15 +99,20 @@ export async function GET(req: NextRequest) {
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
-      .toArray()
+      .toArray() as VehicleDocument[]
 
     // Get total count for pagination
     const total = await db.collection("vehicles").countDocuments(query)
 
-
+    // Transform vehicles to include id instead of _id
+    const transformedVehicles = vehicles.map(vehicle => ({
+      id: vehicle._id.toString(),
+      ...vehicle,
+      _id: undefined
+    }))
 
     return NextResponse.json({
-      vehicles,
+      vehicles: transformedVehicles,
       pagination: {
         total,
         page,

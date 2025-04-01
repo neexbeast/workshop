@@ -56,6 +56,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
+    // Transform vehicle to include id instead of _id
+    const transformedVehicle = {
+      id: vehicle._id.toString(),
+      ...vehicle,
+      _id: undefined
+    }
+
     // Get the customer details
     const customer = await db.collection("customers").findOne({ _id: new ObjectId(vehicle.customerId) })
 
@@ -63,7 +70,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const services = await db.collection("services").find({ vehicleId: vehicleId }).sort({ serviceDate: -1 }).toArray()
 
     return NextResponse.json({
-      vehicle,
+      vehicle: transformedVehicle,
       customer,
       services,
     })

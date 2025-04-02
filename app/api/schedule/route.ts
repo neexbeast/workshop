@@ -1,7 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb/mongodb"
 import { getAuth } from "firebase-admin/auth"
+import { initializeApp, getApps, cert } from "firebase-admin/app"
 import { ObjectId } from "mongodb"
+
+// Initialize Firebase Admin SDK if it hasn't been initialized
+if (!getApps().length) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || "{}")
+
+  initializeApp({
+    credential: cert(serviceAccount),
+  })
+}
 
 // Middleware to verify Firebase token
 async function verifyAuthToken(req: NextRequest) {

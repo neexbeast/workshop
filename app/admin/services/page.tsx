@@ -21,6 +21,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import type { Service, Vehicle, Customer } from "@/lib/mongodb/models"
 import { format } from "date-fns"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([])
@@ -29,6 +30,7 @@ export default function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [activeTab, setActiveTab] = useState("all")
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -72,11 +74,32 @@ export default function ServicesPage() {
   const filteredServices = services.filter(
     (service) =>
       service.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicles[service.vehicleId]?.vin.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicles[service.vehicleId]?.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicles[service.vehicleId]?.model.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // Filter services based on date
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const upcomingServices = filteredServices
+    .filter(service => new Date(service.serviceDate) >= today)
+    .sort((a, b) => new Date(a.serviceDate).getTime() - new Date(b.serviceDate).getTime())
+
+  const pastServices = filteredServices
+    .filter(service => new Date(service.serviceDate) < today)
+    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+
+  const allServices = filteredServices
+    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+
+  const displayedServices = {
+    all: allServices,
+    upcoming: upcomingServices,
+    past: pastServices
+  }[activeTab] || []
 
   const handleDeleteService = async (id: string) => {
     if (!auth.user) return
@@ -121,112 +144,168 @@ export default function ServicesPage() {
           </Link>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search services..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {error ? (
-          <div className="text-center text-red-500">{error}</div>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="all">All Services</TabsTrigger>
+            <TabsTrigger value="upcoming">Upcoming Services</TabsTrigger>
+            <TabsTrigger value="past">Past Services</TabsTrigger>
+          </TabsList>
+          <TabsContent value="all" className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading services...</span>
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search all services..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
-        ) : filteredServices.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No services found.</div>
-        ) : (
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Service Type</TableHead>
-                  <TableHead>Mileage</TableHead>
-                  <TableHead>Cost</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredServices.map((service) => {
-                  const vehicle = vehicles[service.vehicleId]
-                  const customer = vehicle ? customers[vehicle.customerId] : null
-
-                  return (
-                    <TableRow key={service.id}>
-                      <TableCell>{format(new Date(service.serviceDate), "MMM d, yyyy")}</TableCell>
-                      <TableCell>
-                        {vehicle ? (
-                          <div>
-                            <div>
-                              {vehicle.make} {vehicle.model} ({vehicle.year})
-                            </div>
-                            <div className="text-sm text-muted-foreground">{vehicle.vin}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Vehicle not found</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {customer ? (
-                          <div>
-                            <div>{customer.name}</div>
-                            <div className="text-sm text-muted-foreground">{customer.email}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Customer not found</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{service.serviceType}</TableCell>
-                      <TableCell>{service.mileage?.toLocaleString()} km</TableCell>
-                      <TableCell>${service.cost?.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/services/${service.id}`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeleteService(service.id)}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+            {renderServicesList()}
+          </TabsContent>
+          <TabsContent value="upcoming" className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search upcoming services..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            {renderServicesList()}
+          </TabsContent>
+          <TabsContent value="past" className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search past services..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            {renderServicesList()}
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   )
+
+  function renderServicesList() {
+    if (error) {
+      return <div className="text-center text-red-500">{error}</div>
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-8">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading services...</span>
+          </div>
+        </div>
+      )
+    }
+
+    if (displayedServices.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          {activeTab === "upcoming" && "No upcoming services found."}
+          {activeTab === "past" && "No past services found."}
+          {activeTab === "all" && "No services found."}
+        </div>
+      )
+    }
+
+    return (
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Service Type</TableHead>
+              <TableHead>Mileage</TableHead>
+              <TableHead>Cost</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayedServices.map((service) => {
+              const vehicle = vehicles[service.vehicleId]
+              const customer = vehicle ? customers[vehicle.customerId] : null
+
+              return (
+                <TableRow key={service.id}>
+                  <TableCell>{format(new Date(service.serviceDate), "MMM d, yyyy")}</TableCell>
+                  <TableCell>
+                    {vehicle ? (
+                      <div>
+                        <div>
+                          {vehicle.make} {vehicle.model} ({vehicle.year})
+                        </div>
+                        <div className="text-sm text-muted-foreground">{vehicle.vin}</div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Vehicle not found</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {customer ? (
+                      <div>
+                        <div>{customer.name}</div>
+                        <div className="text-sm text-muted-foreground">{customer.email}</div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Customer not found</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{service.serviceType}</TableCell>
+                  <TableCell>{service.mileage?.toLocaleString()} km</TableCell>
+                  <TableCell>${service.cost?.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/services/${service.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDeleteService(service.id)}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
 } 

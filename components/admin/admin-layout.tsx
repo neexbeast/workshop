@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Users, Car, Wrench, Bell, Settings, LogOut, Menu, X, Calendar } from "lucide-react"
+import { LayoutDashboard, Users, Car, Wrench, Bell, Settings, LogOut, Menu, X, Calendar, TrendingUp } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -63,6 +63,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Vehicles", href: "/admin/vehicles", icon: Car },
     { name: "Services", href: "/admin/services", icon: Wrench },
     { name: "Schedule", href: "/admin/schedule", icon: Calendar },
+    { name: "Reports", href: "/admin/reports", icon: TrendingUp },
     { name: "Reminders", href: "/admin/reminders", icon: Bell },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ]

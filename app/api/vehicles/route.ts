@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const page = parseInt(searchParams.get("page") || "1")
     const limit = parseInt(searchParams.get("limit") || "10")
+    const customerId = searchParams.get("customerId") || ""
     const skip = (page - 1) * limit
 
     // Connect to MongoDB
@@ -69,8 +70,12 @@ export async function GET(request: NextRequest) {
     // Base query
     const query: Record<string, unknown> = {}
 
+    // If customerId is provided, filter by that specific customer
+    if (customerId && ObjectId.isValid(customerId)) {
+      query.customerId = customerId
+    }
     // For client users, only return vehicles associated with their customer records
-    if (decodedToken.role === "client") {
+    else if (decodedToken.role === "client") {
       // First, get the customer associated with this user
       const customer = await db.collection("customers").findOne({ userId: decodedToken.uid }) as CustomerDocument | null
       console.log("Found customer for user:", decodedToken.uid, customer)

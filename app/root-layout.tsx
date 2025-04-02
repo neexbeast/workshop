@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { RootLayoutClient } from "./layout-client"
+import { RootLayoutClient } from "./layout"
 
 export const metadata: Metadata = {
   title: "Workshop Service Manager",
@@ -12,5 +12,4 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return <RootLayoutClient>{children}</RootLayoutClient>
-}
-
+} 

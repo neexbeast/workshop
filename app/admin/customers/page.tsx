@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,38 +13,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Car } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { customersApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import type { Customer } from "@/lib/mongodb/models"
+import { useCustomers, useDeleteCustomer } from "@/lib/api/hooks"
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
-  const auth = useAuth()
+  const { firebaseUser } = useAuth()
   const { toast } = useToast()
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      if (!auth.user) return
+  const { data: customersData, isLoading } = useCustomers(searchQuery)
+  const deleteCustomer = useDeleteCustomer()
 
-      setIsLoading(true)
-      try {
-        const response = await customersApi.getCustomers({ firebaseUser: auth.firebaseUser })
-        setCustomers(response.customers || [])
-      } catch (error) {
-        console.error("Error fetching customers:", error)
-        setError(error instanceof Error ? error.message : "Failed to fetch customers")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchCustomers()
-  }, [auth.user, auth.firebaseUser])
+  const customers = customersData?.customers ?? []
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -54,11 +37,10 @@ export default function CustomersPage() {
   )
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!auth.user) return
+    if (!firebaseUser) return
     
     try {
-      await customersApi.deleteCustomer({ firebaseUser: auth.firebaseUser }, id)
-      setCustomers(customers.filter((customer) => customer.id !== id))
+      await deleteCustomer.mutateAsync(id)
       toast({
         title: "Customer deleted",
         description: "The customer has been deleted successfully.",
@@ -99,10 +81,14 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {error ? (
-          <div className="text-center text-red-500">{error}</div>
-        ) : isLoading ? (
-          <div className="text-center">Loading customers...</div>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No customers found
+          </div>
         ) : (
           <div className="border rounded-lg">
             <Table>
@@ -116,55 +102,48 @@ export default function CustomersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      No customers found
+                {filteredCustomers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell>{customer.email}</TableCell>
+                    <TableCell>{customer.phone}</TableCell>
+                    <TableCell>{customer.address || "N/A"}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <a href={`/admin/customers/${customer.id}`}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <a href={`/admin/vehicles?customerId=${customer.id}`}>
+                              <Car className="h-4 w-4 mr-2" />
+                              View Vehicles
+                            </a>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteCustomer(customer.id)}
+                            disabled={deleteCustomer.isPending}
+                          >
+                            <Trash className="h-4 w-4 mr-2" />
+                            {deleteCustomer.isPending ? "Deleting..." : "Delete"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>{customer.address || "N/A"}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/customers/${customer.id}`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/vehicles?customerId=${customer.id}`}>
-                                <Car className="h-4 w-4 mr-2" />
-                                View Vehicles
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeleteCustomer(customer.id)}
-                            >
-                              <Trash className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>

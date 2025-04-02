@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,61 +15,62 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Plus, Search, MoreHorizontal, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { servicesApi, vehiclesApi, customersApi } from "@/lib/api/api-client"
+import { servicesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import type { Service, Vehicle, Customer } from "@/lib/mongodb/models"
+import type { Vehicle, Customer } from "@/lib/mongodb/models"
 import { format } from "date-fns"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { useServices, useVehicles, useCustomers } from "@/lib/api/hooks"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>([])
-  const [vehicles, setVehicles] = useState<{ [key: string]: Vehicle }>({})
-  const [customers, setCustomers] = useState<{ [key: string]: Customer }>({})
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const vehicleId = searchParams.get("vehicleId") || undefined
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!auth.user) return
+  // Fetch data using React Query
+  const { data: servicesData, isLoading: isLoadingServices } = useServices(undefined, vehicleId)
+  const { data: vehiclesData } = useVehicles()
+  const { data: customersData } = useCustomers()
 
-      setIsLoading(true)
-      try {
-        // Fetch services, filtered by vehicleId if provided
-        const servicesResponse = await servicesApi.getServices({ firebaseUser: auth.firebaseUser }, undefined, vehicleId)
-        setServices(servicesResponse.services || [])
+  // Create lookup maps for vehicles and customers
+  const vehicles = vehiclesData?.vehicles.reduce((acc, vehicle) => {
+    acc[vehicle.id] = vehicle
+    return acc
+  }, {} as { [key: string]: Vehicle }) || {}
 
-        // Fetch all vehicles and customers to display their details
-        const vehiclesResponse = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser })
-        const vehiclesMap = vehiclesResponse.vehicles.reduce((acc, vehicle) => {
-          acc[vehicle.id] = vehicle
-          return acc
-        }, {} as { [key: string]: Vehicle })
-        setVehicles(vehiclesMap)
+  const customers = customersData?.customers.reduce((acc, customer) => {
+    acc[customer.id] = customer
+    return acc
+  }, {} as { [key: string]: Customer }) || {}
 
-        const customersResponse = await customersApi.getCustomers({ firebaseUser: auth.firebaseUser })
-        const customersMap = customersResponse.customers.reduce((acc, customer) => {
-          acc[customer.id] = customer
-          return acc
-        }, {} as { [key: string]: Customer })
-        setCustomers(customersMap)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        setError(error instanceof Error ? error.message : "Failed to fetch data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => servicesApi.deleteService({ firebaseUser: auth.firebaseUser }, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] })
+      toast({
+        title: "Success",
+        description: "Service deleted successfully",
+      })
+    },
+    onError: (error) => {
+      console.error("Error deleting service:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete service. Please try again.",
+        variant: "destructive",
+      })
+    },
+  })
 
-    fetchData()
-  }, [auth.user, auth.firebaseUser, vehicleId])
+  const services = servicesData?.services || []
 
   const filteredServices = services.filter(
     (service) =>
@@ -102,23 +103,105 @@ export default function ServicesPage() {
   }[activeTab] || []
 
   const handleDeleteService = async (id: string) => {
-    if (!auth.user) return
-    
-    try {
-      await servicesApi.deleteService({ firebaseUser: auth.firebaseUser }, id)
-      setServices(services.filter((service) => service.id !== id))
-      toast({
-        title: "Success",
-        description: "Service deleted successfully",
-      })
-    } catch (error) {
-      console.error("Error deleting service:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete service. Please try again.",
-        variant: "destructive",
-      })
+    if (!auth.firebaseUser) return
+    deleteMutation.mutate(id)
+  }
+
+  function renderServicesList() {
+    if (isLoadingServices) {
+      return (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
     }
+
+    return (
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Vehicle</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Service Type</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Cost</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayedServices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  No services found
+                </TableCell>
+              </TableRow>
+            ) : (
+              displayedServices.map((service) => {
+                const vehicle = vehicles[service.vehicleId]
+                const customer = vehicle ? customers[vehicle.customerId] : null
+
+                return (
+                  <TableRow key={service.id}>
+                    <TableCell>{format(new Date(service.serviceDate), "PPP")}</TableCell>
+                    <TableCell>
+                      {vehicle ? (
+                        <Link href={`/admin/vehicles/${vehicle.id}`} className="hover:underline">
+                          {vehicle.make} {vehicle.model} ({vehicle.year})
+                        </Link>
+                      ) : (
+                        "Unknown Vehicle"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {customer ? (
+                        <Link href={`/admin/customers/${customer.id}`} className="hover:underline">
+                          {customer.name}
+                        </Link>
+                      ) : (
+                        "Unknown Customer"
+                      )}
+                    </TableCell>
+                    <TableCell>{service.serviceType}</TableCell>
+                    <TableCell>{service.description}</TableCell>
+                    <TableCell>${(service.cost ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/services/edit/${service.id}`}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteService(service.id)}
+                            className="text-red-600"
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    )
   }
 
   return (
@@ -199,113 +282,4 @@ export default function ServicesPage() {
       </div>
     </AdminLayout>
   )
-
-  function renderServicesList() {
-    if (error) {
-      return <div className="text-center text-red-500">{error}</div>
-    }
-
-    if (isLoading) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading services...</span>
-          </div>
-        </div>
-      )
-    }
-
-    if (displayedServices.length === 0) {
-      return (
-        <div className="text-center py-8 text-muted-foreground">
-          {activeTab === "upcoming" && "No upcoming services found."}
-          {activeTab === "past" && "No past services found."}
-          {activeTab === "all" && "No services found."}
-        </div>
-      )
-    }
-
-    return (
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Service Type</TableHead>
-              <TableHead>Mileage</TableHead>
-              <TableHead>Cost</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayedServices.map((service) => {
-              const vehicle = vehicles[service.vehicleId]
-              const customer = vehicle ? customers[vehicle.customerId] : null
-
-              return (
-                <TableRow key={service.id}>
-                  <TableCell>{format(new Date(service.serviceDate), "MMM d, yyyy")}</TableCell>
-                  <TableCell>
-                    {vehicle ? (
-                      <div>
-                        <div>
-                          {vehicle.make} {vehicle.model} ({vehicle.year})
-                        </div>
-                        <div className="text-sm text-muted-foreground">{vehicle.vin}</div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Vehicle not found</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {customer ? (
-                      <div>
-                        <div>{customer.name}</div>
-                        <div className="text-sm text-muted-foreground">{customer.email}</div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Customer not found</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{service.serviceType}</TableCell>
-                  <TableCell>{service.mileage?.toLocaleString()} km</TableCell>
-                  <TableCell>${service.cost?.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/services/${service.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => handleDeleteService(service.id)}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    )
-  }
 } 

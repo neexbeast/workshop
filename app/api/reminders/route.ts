@@ -38,12 +38,25 @@ export async function GET(req: NextRequest) {
     const vehicleId = url.searchParams.get("vehicleId") || ""
     const customerId = url.searchParams.get("customerId") || ""
     const upcoming = url.searchParams.get("upcoming") === "true"
+    const dateFilter = url.searchParams.get("dateFilter") || "all"
     const limit = Number.parseInt(url.searchParams.get("limit") || "50")
     const page = Number.parseInt(url.searchParams.get("page") || "1")
     const skip = (page - 1) * limit
 
+    // Define the query interface
+    interface ReminderQuery {
+      vehicleId?: string;
+      customerId?: string | { $in: string[] };
+      sent?: boolean;
+      reminderDate?: {
+        $gte?: Date;
+        $lt?: Date;
+        $lte?: Date;
+      };
+    }
+
     // Build the query
-    const query: any = {}
+    const query: ReminderQuery = {}
 
     // If vehicleId is provided, filter by vehicle
     if (vehicleId && ObjectId.isValid(vehicleId)) {
@@ -59,6 +72,71 @@ export async function GET(req: NextRequest) {
     if (upcoming) {
       query.sent = false
       query.reminderDate = { $gte: new Date() }
+    }
+
+    // Add date filter
+    if (dateFilter && dateFilter !== "all") {
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      
+      switch (dateFilter) {
+        case "today":
+          query.reminderDate = {
+            $gte: today,
+            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          }
+          break
+        case "week": {
+          // Get the current date
+          const currentDate = new Date()
+          // Get the first day of the current week (Monday)
+          const firstDay = new Date(currentDate)
+          firstDay.setDate(currentDate.getDate() - currentDate.getDay() + (currentDate.getDay() === 0 ? -6 : 1))
+          firstDay.setHours(0, 0, 0, 0)
+          
+          // Get the last day of the current week (Sunday)
+          const lastDay = new Date(firstDay)
+          lastDay.setDate(firstDay.getDate() + 6)
+          lastDay.setHours(23, 59, 59, 999)
+
+          console.log('Date filter - week:', {
+            firstDay: firstDay.toISOString(),
+            lastDay: lastDay.toISOString(),
+            currentDate: currentDate.toISOString()
+          })
+
+          query.reminderDate = {
+            $gte: firstDay,
+            $lte: lastDay
+          }
+          break
+        }
+        case "month": {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+          startOfMonth.setHours(0, 0, 0, 0)
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+          query.reminderDate = { 
+            $gte: startOfMonth,
+            $lte: endOfMonth
+          }
+          break
+        }
+        case "year": {
+          const startOfYear = new Date(now.getFullYear(), 0, 1)
+          startOfYear.setHours(0, 0, 0, 0)
+          const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+          query.reminderDate = { 
+            $gte: startOfYear,
+            $lte: endOfYear
+          }
+          break
+        }
+      }
+
+      console.log('Date filter query:', {
+        filter: dateFilter,
+        query: query.reminderDate
+      })
     }
 
     // For client users, only return reminders for their vehicles
@@ -85,34 +163,49 @@ export async function GET(req: NextRequest) {
       query.customerId = { $in: customerIds }
     }
 
-    // Get reminders from the database
-    const reminders = await db
-      .collection("reminders")
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ reminderDate: 1 })
-      .toArray()
-
     // Get total count for pagination
     const total = await db.collection("reminders").countDocuments(query)
 
-    // For each reminder, get the service, vehicle, and customer details
+    // Get reminders with pagination
+    const reminders = await db
+      .collection("reminders")
+      .find(query)
+      .sort({ reminderDate: 1 }) // Sort by reminder date ascending
+      .skip(skip)
+      .limit(limit)
+      .toArray()
+
+    // Add comprehensive debug logging
+    console.log('=== DEBUG: REMINDERS QUERY ===')
+    console.log('Date Filter:', dateFilter)
+    console.log('Query:', JSON.stringify(query, null, 2))
+    console.log('=== DEBUG: FOUND REMINDERS ===')
+    reminders.forEach(r => {
+      console.log({
+        id: r._id.toString(),
+        date: new Date(r.reminderDate).toISOString(),
+        rawDate: r.reminderDate,
+        message: r.message,
+        sent: r.sent
+      })
+    })
+    console.log('=== DEBUG: END ===')
+
+    // Get additional details for each reminder
     const remindersWithDetails = await Promise.all(
       reminders.map(async (reminder) => {
         const service = await db.collection("services").findOne({ _id: new ObjectId(reminder.serviceId) })
-
         const vehicle = await db.collection("vehicles").findOne({ _id: new ObjectId(reminder.vehicleId) })
-
         const customer = await db.collection("customers").findOne({ _id: new ObjectId(reminder.customerId) })
 
         return {
           ...reminder,
+          id: reminder._id.toString(),
           service,
           vehicle,
           customer,
         }
-      }),
+      })
     )
 
     return NextResponse.json({
@@ -224,7 +317,7 @@ export async function sendReminders(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (decodedToken.role !== "admin") {
+    if (decodedToken.role !== "admin" && decodedToken.role !== "worker") {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
     }
 

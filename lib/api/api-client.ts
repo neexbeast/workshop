@@ -1,5 +1,8 @@
 import type { Customer, Vehicle, Service, Reminder } from "@/lib/mongodb/models"
 import type { User as FirebaseUser } from "firebase/auth"
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { format } from "date-fns"
 
 // Base URL for API requests
 const API_BASE_URL = "/api"
@@ -222,12 +225,11 @@ export const servicesApi = {
 
 // API client for reminders
 export const remindersApi = {
-  getReminders: async (user: AuthUserType, vehicleId?: string, upcoming = false, page = 1, limit = 50) => {
+  getReminders: async (user: AuthUserType, options?: { vehicleId?: string; upcoming?: boolean; dateFilter?: string }) => {
     const queryParams = new URLSearchParams()
-    if (vehicleId) queryParams.append("vehicleId", vehicleId)
-    if (upcoming) queryParams.append("upcoming", "true")
-    if (page) queryParams.append("page", page.toString())
-    if (limit) queryParams.append("limit", limit.toString())
+    if (options?.vehicleId) queryParams.append("vehicleId", options.vehicleId)
+    if (options?.upcoming) queryParams.append("upcoming", "true")
+    if (options?.dateFilter) queryParams.append("dateFilter", options.dateFilter)
 
     return fetchWithAuth<{ reminders: Reminder[]; pagination: { total: number; page: number; limit: number; pages: number } }>(
       `${API_BASE_URL}/reminders?${queryParams.toString()}`,
@@ -274,12 +276,98 @@ export const remindersApi = {
     )
   },
 
-  sendReminders: async (user: AuthUserType) => {
-    return fetchWithAuth<{ message: string; count: number }>(
+  sendReminder: async (user: AuthUserType, id: string) => {
+    return fetchWithAuth<{ success: boolean }>(
       `${API_BASE_URL}/reminders/send`,
-      { method: "POST" },
+      {
+        method: "POST",
+        body: JSON.stringify({ id }),
+      },
       user
     )
   },
+}
+
+// Schedule hooks
+export function useSchedules(date: Date) {
+  const { firebaseUser } = useAuth()
+  return useQuery({
+    queryKey: ["schedules", format(date, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const token = await firebaseUser?.getIdToken()
+      const response = await fetch(`/api/schedule?date=${format(date, "yyyy-MM-dd")}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch schedules")
+      }
+      return response.json()
+    },
+    enabled: !!firebaseUser,
+  })
+}
+
+// Availability hooks
+export function useAvailability(date: Date) {
+  const { firebaseUser } = useAuth()
+  return useQuery({
+    queryKey: ["availability", format(date, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const token = await firebaseUser?.getIdToken()
+      const response = await fetch(`/api/availability?date=${format(date, "yyyy-MM-dd")}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch availability")
+      }
+      return response.json()
+    },
+    enabled: !!firebaseUser,
+  })
+}
+
+interface AvailabilityData {
+  date: string
+  isBlocked: boolean
+  workingHours: {
+    start: string
+    end: string
+    interval: number
+  }
+  timeSlots: Array<{
+    time: string
+    available: boolean
+  }>
+}
+
+export function useUpdateAvailability() {
+  const { firebaseUser } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation<unknown, Error, AvailabilityData>({
+    mutationFn: async (data) => {
+      const token = await firebaseUser?.getIdToken()
+      const response = await fetch("/api/availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to save availability")
+      }
+      return response.json()
+    },
+    onSuccess: (_: unknown, variables: AvailabilityData) => {
+      queryClient.invalidateQueries({ queryKey: ["availability", variables.date] })
+    },
+  })
 }
 

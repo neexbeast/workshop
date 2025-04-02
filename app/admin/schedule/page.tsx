@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { Loader2, Clock, User, Car } from "lucide-react"
+import { useSchedules, useAvailability, useUpdateAvailability } from "@/lib/api/api-client"
 
 // Default working hours
 const defaultWorkingHours = {
@@ -27,18 +28,15 @@ interface TimeSlot {
   available: boolean
 }
 
-interface Availability {
-  date: string
-  isBlocked: boolean
-  workingHours: typeof defaultWorkingHours
-  timeSlots: TimeSlot[]
+interface WorkingHours {
+  start: string
+  end: string
+  interval: number
 }
 
 interface Schedule {
   id: string
-  date: string
   time: string
-  customerName: string
   customerEmail: string
   vehicleInfo: string
   serviceType: string
@@ -46,95 +44,22 @@ interface Schedule {
 
 export default function AdminSchedulePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [isDateBlocked, setIsDateBlocked] = useState(false)
-  const [workingHours, setWorkingHours] = useState(defaultWorkingHours)
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false)
-  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false)
   const [isEditingHours, setIsEditingHours] = useState(false)
-  const auth = useAuth()
+  const [editingWorkingHours, setEditingWorkingHours] = useState<WorkingHours>(defaultWorkingHours)
+  const { firebaseUser } = useAuth()
   const { toast } = useToast()
 
-  // Fetch schedules for the selected date
-  const fetchSchedules = async (date: Date) => {
-    if (!auth.firebaseUser) return
+  const { data: availabilityData, isLoading: isLoadingAvailability } = useAvailability(selectedDate)
+  const { data: schedulesData, isLoading: isLoadingSchedules } = useSchedules(selectedDate)
+  const updateAvailability = useUpdateAvailability()
 
-    setIsLoadingSchedules(true)
-    try {
-      const token = await auth.firebaseUser.getIdToken()
-      const response = await fetch(`/api/schedule?date=${format(date, "yyyy-MM-dd")}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch schedules")
-      }
-
-      const data = await response.json()
-      setSchedules(data.schedules || [])
-    } catch (error) {
-      console.error("Error fetching schedules:", error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch schedules",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoadingSchedules(false)
-    }
-  }
-
-  // Fetch availability for selected date
-  const fetchAvailability = async (date: Date) => {
-    if (!auth.firebaseUser) return
-
-    setIsLoadingAvailability(true)
-    try {
-      const token = await auth.firebaseUser.getIdToken()
-      const response = await fetch(`/api/availability?date=${format(date, "yyyy-MM-dd")}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch availability")
-      }
-
-      const data: Availability = await response.json()
-      
-      setIsDateBlocked(data.isBlocked)
-      setWorkingHours(data.workingHours || defaultWorkingHours)
-
-      // If we have saved time slots, use them
-      if (data.timeSlots?.length > 0) {
-        setTimeSlots(data.timeSlots)
-      } else {
-        // If no saved time slots, generate new ones with default availability
-        generateTimeSlots(data.workingHours || defaultWorkingHours)
-      }
-    } catch (error) {
-      console.error("Error fetching availability:", error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch availability settings",
-        variant: "destructive",
-      })
-      // Reset to defaults
-      setIsDateBlocked(false)
-      setWorkingHours(defaultWorkingHours)
-      generateTimeSlots(defaultWorkingHours)
-    } finally {
-      setIsLoadingAvailability(false)
-    }
-  }
+  const isDateBlocked = availabilityData?.isBlocked ?? false
+  const workingHours = availabilityData?.workingHours ?? defaultWorkingHours
+  const timeSlots = availabilityData?.timeSlots ?? []
+  const schedules = schedulesData?.schedules ?? []
 
   // Generate time slots for the selected date
-  const generateTimeSlots = (hours: typeof defaultWorkingHours) => {
+  const generateTimeSlots = (hours: WorkingHours) => {
     const slots: TimeSlot[] = []
     const [startHour, startMinute] = hours.start.split(":").map(Number)
     const [endHour, endMinute] = hours.end.split(":").map(Number)
@@ -153,29 +78,22 @@ export default function AdminSchedulePage() {
       currentTime = new Date(currentTime.getTime() + hours.interval * 60000)
     }
     
-    setTimeSlots(slots)
+    return slots
   }
-
-  // Effect to fetch availability when date changes
-  useEffect(() => {
-    fetchAvailability(selectedDate)
-  }, [selectedDate, auth.firebaseUser])
-
-  // Effect to fetch schedules when date changes
-  useEffect(() => {
-    fetchSchedules(selectedDate)
-  }, [selectedDate, auth.firebaseUser])
 
   const handleTimeSlotChange = (checked: boolean, slotTime: string) => {
-    setTimeSlots(slots =>
-      slots.map(s =>
-        s.time === slotTime ? { ...s, available: checked } : s
-      )
+    const updatedSlots = timeSlots.map((s: TimeSlot) =>
+      s.time === slotTime ? { ...s, available: checked } : s
     )
+    handleSaveAvailability(isDateBlocked, workingHours, updatedSlots)
   }
 
-  const handleSaveAvailability = async () => {
-    if (!auth.firebaseUser) {
+  const handleSaveAvailability = async (
+    isBlocked: boolean,
+    hours: WorkingHours,
+    slots: TimeSlot[]
+  ) => {
+    if (!firebaseUser) {
       toast({
         title: "Error",
         description: "You must be logged in to save availability",
@@ -184,28 +102,13 @@ export default function AdminSchedulePage() {
       return
     }
 
-    setIsLoading(true)
     try {
-      const token = await auth.firebaseUser.getIdToken()
-      const response = await fetch("/api/availability", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          date: format(selectedDate, "yyyy-MM-dd"),
-          isBlocked: isDateBlocked,
-          workingHours,
-          timeSlots,
-        }),
+      await updateAvailability.mutateAsync({
+        date: format(selectedDate, "yyyy-MM-dd"),
+        isBlocked,
+        workingHours: hours,
+        timeSlots: slots,
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save availability")
-      }
 
       toast({
         title: "Success",
@@ -218,15 +121,13 @@ export default function AdminSchedulePage() {
         description: error instanceof Error ? error.message : "Failed to save availability settings",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleSaveWorkingHours = () => {
     setIsEditingHours(false)
-    // Generate new time slots with the updated working hours
-    generateTimeSlots(workingHours)
+    const newSlots = generateTimeSlots(editingWorkingHours)
+    handleSaveAvailability(isDateBlocked, editingWorkingHours, newSlots)
     toast({
       title: "Success",
       description: "Working hours have been updated.",
@@ -238,7 +139,7 @@ export default function AdminSchedulePage() {
       <div className="container mx-auto py-6 space-y-6">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Schedule Management</h1>
-          <p className="text-muted-foreground">Manage your shop's availability and view appointments</p>
+          <p className="text-muted-foreground">Manage your shop&apos;s availability and view appointments</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -269,7 +170,10 @@ export default function AdminSchedulePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsEditingHours(true)}
+                  onClick={() => {
+                    setEditingWorkingHours(workingHours)
+                    setIsEditingHours(true)
+                  }}
                 >
                   Edit Hours
                 </Button>
@@ -278,8 +182,8 @@ export default function AdminSchedulePage() {
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={isDateBlocked}
-                    onCheckedChange={setIsDateBlocked}
-                    disabled={isLoading}
+                    onCheckedChange={(checked) => handleSaveAvailability(checked, workingHours, timeSlots)}
+                    disabled={isLoadingAvailability}
                   />
                   <Label>Block entire day</Label>
                 </div>
@@ -322,7 +226,7 @@ export default function AdminSchedulePage() {
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {schedules.map((schedule) => (
+                    {schedules.map((schedule: Schedule) => (
                       <Card key={schedule.id}>
                         <CardContent className="pt-6">
                           <div className="grid gap-2">
@@ -364,12 +268,12 @@ export default function AdminSchedulePage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {timeSlots.map((slot) => (
+                    {timeSlots.map((slot: TimeSlot) => (
                       <div key={slot.time} className="flex items-center space-x-2">
                         <Switch
                           checked={slot.available}
                           onCheckedChange={(checked) => handleTimeSlotChange(checked, slot.time)}
-                          disabled={isLoading}
+                          disabled={isLoadingAvailability}
                         />
                         <Label>{slot.time}</Label>
                       </div>
@@ -377,10 +281,10 @@ export default function AdminSchedulePage() {
 
                     <Button
                       className="w-full"
-                      onClick={handleSaveAvailability}
-                      disabled={isLoading}
+                      onClick={() => handleSaveAvailability(isDateBlocked, workingHours, timeSlots)}
+                      disabled={isLoadingAvailability}
                     >
-                      {isLoading ? (
+                      {isLoadingAvailability ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Saving...
@@ -412,9 +316,9 @@ export default function AdminSchedulePage() {
                   <Input
                     id="startTime"
                     type="time"
-                    value={workingHours.start}
+                    value={editingWorkingHours.start}
                     onChange={(e) =>
-                      setWorkingHours((prev) => ({ ...prev, start: e.target.value }))
+                      setEditingWorkingHours((prev: WorkingHours) => ({ ...prev, start: e.target.value }))
                     }
                   />
                 </div>
@@ -423,9 +327,9 @@ export default function AdminSchedulePage() {
                   <Input
                     id="endTime"
                     type="time"
-                    value={workingHours.end}
+                    value={editingWorkingHours.end}
                     onChange={(e) =>
-                      setWorkingHours((prev) => ({ ...prev, end: e.target.value }))
+                      setEditingWorkingHours((prev: WorkingHours) => ({ ...prev, end: e.target.value }))
                     }
                   />
                 </div>
@@ -433,9 +337,9 @@ export default function AdminSchedulePage() {
               <div className="space-y-2">
                 <Label htmlFor="interval">Interval (minutes)</Label>
                 <Select
-                  value={workingHours.interval.toString()}
+                  value={editingWorkingHours.interval.toString()}
                   onValueChange={(value) =>
-                    setWorkingHours((prev) => ({ ...prev, interval: parseInt(value) }))
+                    setEditingWorkingHours((prev: WorkingHours) => ({ ...prev, interval: parseInt(value) }))
                   }
                 >
                   <SelectTrigger id="interval">

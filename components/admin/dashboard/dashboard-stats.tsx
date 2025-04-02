@@ -1,58 +1,40 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { customersApi, vehiclesApi, servicesApi, remindersApi } from "@/lib/api/api-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Car, Wrench, Bell } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-
-interface DashboardStats {
-  totalCustomers: number
-  totalVehicles: number
-  totalServices: number
-  totalReminders: number
-}
+import { useQuery } from "@tanstack/react-query"
 
 export function DashboardStats() {
-  const { user, firebaseUser } = useAuth()
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCustomers: 0,
-    totalVehicles: 0,
-    totalServices: 0,
-    totalReminders: 0,
+  const { firebaseUser } = useAuth()
+
+  const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
+    queryKey: ["customers", "count"],
+    queryFn: () => customersApi.getCustomers({ firebaseUser }, undefined, 1, 1),
+    enabled: !!firebaseUser,
   })
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        if (!user || !firebaseUser) return
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useQuery({
+    queryKey: ["vehicles", "count"],
+    queryFn: () => vehiclesApi.getVehicles({ firebaseUser }, undefined, undefined, 1, 1),
+    enabled: !!firebaseUser,
+  })
 
-        setLoading(true)
+  const { data: servicesData, isLoading: isLoadingServices } = useQuery({
+    queryKey: ["services", "count"],
+    queryFn: () => servicesApi.getServices({ firebaseUser }, undefined, undefined, 1, 1),
+    enabled: !!firebaseUser,
+  })
 
-        const [customersResponse, vehiclesResponse, servicesResponse, remindersResponse] = await Promise.all([
-          customersApi.getCustomers({ firebaseUser }),
-          vehiclesApi.getVehicles({ firebaseUser }),
-          servicesApi.getServices({ firebaseUser }),
-          remindersApi.getReminders({ firebaseUser }, undefined, true),
-        ])
+  const { data: remindersData, isLoading: isLoadingReminders } = useQuery({
+    queryKey: ["reminders", "count"],
+    queryFn: () => remindersApi.getReminders({ firebaseUser }, { upcoming: true }),
+    enabled: !!firebaseUser,
+  })
 
-        setStats({
-          totalCustomers: customersResponse.pagination.total,
-          totalVehicles: vehiclesResponse.pagination.total,
-          totalServices: servicesResponse.pagination.total,
-          totalReminders: remindersResponse.pagination.total,
-        })
-      } catch (error) {
-        console.error("Error fetching dashboard stats:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-  }, [user, firebaseUser])
+  const isLoading = isLoadingCustomers || isLoadingVehicles || isLoadingServices || isLoadingReminders
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -62,11 +44,11 @@ export function DashboardStats() {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+              <div className="text-2xl font-bold">{customersData?.pagination.total || 0}</div>
               <p className="text-xs text-muted-foreground">Registered customers</p>
             </>
           )}
@@ -78,11 +60,11 @@ export function DashboardStats() {
           <Car className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.totalVehicles}</div>
+              <div className="text-2xl font-bold">{vehiclesData?.pagination.total || 0}</div>
               <p className="text-xs text-muted-foreground">Registered vehicles</p>
             </>
           )}
@@ -94,11 +76,11 @@ export function DashboardStats() {
           <Wrench className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.totalServices}</div>
+              <div className="text-2xl font-bold">{servicesData?.pagination.total || 0}</div>
               <p className="text-xs text-muted-foreground">Total services performed</p>
             </>
           )}
@@ -110,11 +92,11 @@ export function DashboardStats() {
           <Bell className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <Skeleton className="h-8 w-[100px]" />
           ) : (
             <>
-              <div className="text-2xl font-bold">{stats.totalReminders}</div>
+              <div className="text-2xl font-bold">{remindersData?.pagination.total || 0}</div>
               <p className="text-xs text-muted-foreground">Due in the next 30 days</p>
             </>
           )}

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,110 +15,85 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Plus, MoreHorizontal, Edit, Trash } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { servicesApi, vehiclesApi, customersApi } from "@/lib/api/api-client"
+import { servicesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import type { Service, Vehicle, Customer } from "@/lib/mongodb/models"
 import { format, addDays, subDays } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardStats } from "@/components/admin/dashboard/dashboard-stats"
+import { useServices, useVehicles, useCustomers } from "@/lib/api/hooks"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import type { Vehicle, Customer, Service } from "@/lib/mongodb/models"
 
 export default function AdminDashboardPage() {
-  const { user, firebaseUser } = useAuth()
-  const [recentServices, setRecentServices] = useState<Service[]>([])
-  const [upcomingServices, setUpcomingServices] = useState<Service[]>([])
-  const [vehicles, setVehicles] = useState<{ [key: string]: Vehicle }>({})
-  const [customers, setCustomers] = useState<{ [key: string]: Customer }>({})
-  const [loading, setLoading] = useState(true)
+  const { firebaseUser } = useAuth()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user || !firebaseUser) {
-        setLoading(false)
-        return
-      }
+  // Fetch data using React Query
+  const { data: servicesData, isLoading: isLoadingServices } = useServices()
+  const { data: vehiclesData } = useVehicles()
+  const { data: customersData } = useCustomers()
 
-      setLoading(true)
-      try {
-        const today = new Date()
-        const thirtyDaysAgo = subDays(today, 30)
-        const thirtyDaysFromNow = addDays(today, 30)
+  // Create lookup maps for vehicles and customers
+  const vehicles = vehiclesData?.vehicles.reduce((acc, vehicle) => {
+    acc[vehicle.id] = vehicle
+    return acc
+  }, {} as { [key: string]: Vehicle }) || {}
 
-        // Fetch all services
-        const servicesResponse = await servicesApi.getServices({ firebaseUser })
-        const allServices = servicesResponse.services || []
+  const customers = customersData?.customers.reduce((acc, customer) => {
+    acc[customer.id] = customer
+    return acc
+  }, {} as { [key: string]: Customer }) || {}
 
-        // Fetch vehicles and customers
-        const vehiclesResponse = await vehiclesApi.getVehicles({ firebaseUser })
-        const vehiclesMap = vehiclesResponse.vehicles.reduce((acc, vehicle) => {
-          acc[vehicle.id] = vehicle
-          return acc
-        }, {} as { [key: string]: Vehicle })
-        setVehicles(vehiclesMap)
-
-        const customersResponse = await customersApi.getCustomers({ firebaseUser })
-        const customersMap = customersResponse.customers.reduce((acc, customer) => {
-          acc[customer.id] = customer
-          return acc
-        }, {} as { [key: string]: Customer })
-        setCustomers(customersMap)
-
-        // Filter recent services (last 30 days)
-        const recent = allServices
-          .filter(service => {
-            const serviceDate = new Date(service.serviceDate)
-            return serviceDate >= thirtyDaysAgo && serviceDate <= today
-          })
-          .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
-        setRecentServices(recent)
-
-        // Filter upcoming services (next 30 days)
-        const upcoming = allServices
-          .filter(service => {
-            const serviceDate = new Date(service.serviceDate)
-            return serviceDate > today && serviceDate <= thirtyDaysFromNow
-          })
-          .sort((a, b) => new Date(a.serviceDate).getTime() - new Date(b.serviceDate).getTime())
-        setUpcomingServices(upcoming)
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to fetch dashboard data",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchDashboardData()
-  }, [user, firebaseUser])
-
-  const handleDeleteService = async (id: string) => {
-    if (!user || !firebaseUser) return
-    
-    try {
-      await servicesApi.deleteService({ firebaseUser }, id)
-      setRecentServices(prev => prev.filter(s => s.id !== id))
-      setUpcomingServices(prev => prev.filter(s => s.id !== id))
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => servicesApi.deleteService({ firebaseUser }, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["services"] })
       toast({
         title: "Success",
         description: "Service deleted successfully",
       })
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error("Error deleting service:", error)
       toast({
         title: "Error",
         description: "Failed to delete service",
         variant: "destructive",
       })
-    }
+    },
+  })
+
+  const services = servicesData?.services || []
+  const today = new Date()
+  const thirtyDaysAgo = subDays(today, 30)
+  const thirtyDaysFromNow = addDays(today, 30)
+
+  // Filter recent services (last 30 days)
+  const recentServices = services
+    .filter(service => {
+      const serviceDate = new Date(service.serviceDate)
+      return serviceDate >= thirtyDaysAgo && serviceDate <= today
+    })
+    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+
+  // Filter upcoming services (next 30 days)
+  const upcomingServices = services
+    .filter(service => {
+      const serviceDate = new Date(service.serviceDate)
+      return serviceDate > today && serviceDate <= thirtyDaysFromNow
+    })
+    .sort((a, b) => new Date(a.serviceDate).getTime() - new Date(b.serviceDate).getTime())
+
+  const handleDeleteService = async (id: string) => {
+    if (!firebaseUser) return
+    deleteMutation.mutate(id)
   }
 
   function renderServicesTable(services: Service[]) {
-    if (loading) {
+    if (isLoadingServices) {
       return (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
@@ -183,7 +157,7 @@ export default function AdminDashboardPage() {
                       <span className="text-muted-foreground">Customer not found</span>
                     )}
                   </TableCell>
-                  <TableCell>${service.cost?.toFixed(2)}</TableCell>
+                  <TableCell>${(service.cost ?? 0).toFixed(2)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -204,6 +178,7 @@ export default function AdminDashboardPage() {
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleDeleteService(service.id)}
+                          disabled={deleteMutation.isPending}
                         >
                           <Trash className="mr-2 h-4 w-4" />
                           Delete

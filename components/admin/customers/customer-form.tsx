@@ -5,7 +5,6 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { customersApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +14,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle, CardContent }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import type { Customer } from "@/lib/mongodb/models"
+import { useCreateCustomer, useUpdateCustomer } from "@/lib/api/hooks"
 
 interface CustomerFormProps {
   customer?: Customer
@@ -34,12 +34,13 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
     address: customer?.address ?? "",
   })
   const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+
+  const createCustomer = useCreateCustomer()
+  const updateCustomer = useUpdateCustomer()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    setIsLoading(true)
 
     if (!firebaseUser) {
       throw new Error("You must be logged in to perform this action")
@@ -47,13 +48,16 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
 
     try {
       if (isEdit && customer) {
-        await customersApi.updateCustomer(firebaseUser, customer.id, formData)
+        await updateCustomer.mutateAsync({
+          id: customer.id,
+          data: formData,
+        })
         toast({
           title: "Success",
           description: "Customer updated successfully"
         })
       } else {
-        await customersApi.createCustomer(firebaseUser, formData)
+        await createCustomer.mutateAsync(formData)
         toast({
           title: "Success",
           description: "Customer created successfully"
@@ -70,10 +74,10 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
         description: "Failed to save customer",
         variant: "destructive"
       })
-    } finally {
-      setIsLoading(false)
     }
   }
+
+  const isLoading = createCustomer.isPending || updateCustomer.isPending
 
   return (
     <Card>
@@ -131,7 +135,7 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
             Cancel
           </Button>

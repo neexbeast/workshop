@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,50 +13,49 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { vehiclesApi, customersApi } from "@/lib/api/api-client"
+import { vehiclesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
-import type { Vehicle, Customer } from "@/lib/mongodb/models"
+import { useVehicles, useCustomer } from "@/lib/api/hooks"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [customer, setCustomer] = useState<Customer | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const customerId = searchParams.get("customerId") || undefined
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!auth.user) return
+  // Fetch data using React Query
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles(undefined, customerId)
+  const { data: customerData } = useCustomer(customerId || "")
 
-      setIsLoading(true)
-      try {
-        // If customerId is provided, fetch customer details
-        if (customerId) {
-          const customerResponse = await customersApi.getCustomer({ firebaseUser: auth.firebaseUser }, customerId)
-          setCustomer(customerResponse.customer)
-        }
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => vehiclesApi.deleteVehicle({ firebaseUser: auth.firebaseUser }, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] })
+      toast({
+        title: "Success",
+        description: "Vehicle deleted successfully",
+      })
+    },
+    onError: (error) => {
+      console.error("Error deleting vehicle:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete vehicle. Please try again.",
+        variant: "destructive",
+      })
+    },
+  })
 
-        // Fetch vehicles, filtered by customerId if provided
-        const response = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser }, undefined, customerId)
-        setVehicles(response.vehicles || [])
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        setError(error instanceof Error ? error.message : "Failed to fetch data")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [auth.user, auth.firebaseUser, customerId])
+  const vehicles = vehiclesData?.vehicles || []
+  const customer = customerData?.customer
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -66,23 +65,8 @@ export default function VehiclesPage() {
   )
 
   const handleDeleteVehicle = async (id: string) => {
-    if (!auth.user) return
-    
-    try {
-      await vehiclesApi.deleteVehicle({ firebaseUser: auth.firebaseUser }, id)
-      setVehicles(vehicles.filter((vehicle) => vehicle.id !== id))
-      toast({
-        title: "Success",
-        description: "Vehicle deleted successfully",
-      })
-    } catch (error) {
-      console.error("Error deleting vehicle:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete vehicle. Please try again.",
-        variant: "destructive",
-      })
-    }
+    if (!auth.firebaseUser) return
+    deleteMutation.mutate(id)
   }
 
   // Function to determine if a vehicle needs service soon
@@ -97,32 +81,115 @@ export default function VehiclesPage() {
     return monthsSinceLastService > 5 || mileage > 30000
   }
 
+  function renderVehiclesList() {
+    if (isLoadingVehicles) {
+      return (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
+    }
+
+    return (
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>VIN</TableHead>
+              <TableHead>Make & Model</TableHead>
+              <TableHead>Year</TableHead>
+              <TableHead>License Plate</TableHead>
+              <TableHead>Mileage</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredVehicles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  No vehicles found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredVehicles.map((vehicle) => (
+                <TableRow key={vehicle.id}>
+                  <TableCell>{vehicle.vin}</TableCell>
+                  <TableCell>
+                    {vehicle.make} {vehicle.model}
+                  </TableCell>
+                  <TableCell>{vehicle.year}</TableCell>
+                  <TableCell>{vehicle.licensePlate || "N/A"}</TableCell>
+                  <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
+                  <TableCell>
+                    {needsServiceSoon(vehicle.lastService, vehicle.mileage) && (
+                      <Badge variant="destructive">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Service Due
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                          <a href={`/admin/vehicles/${vehicle.id}`}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href={`/admin/services/add?vehicleId=${vehicle.id}`}>
+                            <Wrench className="h-4 w-4 mr-2" />
+                            Add Service
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDeleteVehicle(vehicle.id)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            {customer ? (
-              <>
-                <div className="flex items-center space-x-4">
-                  <Button variant="ghost" size="sm" className="pl-0" asChild>
-                    <a href="/admin/customers">
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to Customers
-                    </a>
-                  </Button>
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight">Vehicles for {customer.name}</h1>
-                <p className="text-muted-foreground">
-                  {customer.email} • {customer.phone}
-                </p>
-              </>
-            ) : (
-              <h1 className="text-3xl font-bold tracking-tight">Vehicles</h1>
+          <div className="flex items-center space-x-4">
+            {customer && (
+              <Button variant="ghost" size="icon" asChild>
+                <a href="/admin/customers">
+                  <ArrowLeft className="h-4 w-4" />
+                </a>
+              </Button>
             )}
+            <h1 className="text-3xl font-bold tracking-tight">
+              {customer ? `${customer.name}'s Vehicles` : "Vehicles"}
+            </h1>
           </div>
           <Button asChild>
-            <a href={`/admin/vehicles/add${customerId ? `?customerId=${customerId}` : ''}`}>
+            <a href="/admin/vehicles/add">
               <Plus className="mr-2 h-4 w-4" />
               Add Vehicle
             </a>
@@ -142,89 +209,7 @@ export default function VehiclesPage() {
           </div>
         </div>
 
-        {error ? (
-          <div className="text-center text-red-500">{error}</div>
-        ) : isLoading ? (
-          <div className="text-center">Loading vehicles...</div>
-        ) : (
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>VIN</TableHead>
-                  <TableHead>Make & Model</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>License Plate</TableHead>
-                  <TableHead>Mileage</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredVehicles.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">
-                      No vehicles found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredVehicles.map((vehicle) => (
-                    <TableRow key={vehicle.id}>
-                      <TableCell>{vehicle.vin}</TableCell>
-                      <TableCell>
-                        {vehicle.make} {vehicle.model}
-                      </TableCell>
-                      <TableCell>{vehicle.year}</TableCell>
-                      <TableCell>{vehicle.licensePlate || "N/A"}</TableCell>
-                      <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
-                      <TableCell>
-                        {needsServiceSoon(vehicle.lastService, vehicle.mileage) && (
-                          <Badge variant="destructive">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Service Due
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/vehicles/${vehicle.id}`}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/services/add?vehicleId=${vehicle.id}`}>
-                                <Wrench className="h-4 w-4 mr-2" />
-                                Add Service
-                              </a>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeleteVehicle(vehicle.id)}
-                            >
-                              <Trash className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        {renderVehiclesList()}
       </div>
     </AdminLayout>
   )

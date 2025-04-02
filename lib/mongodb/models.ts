@@ -46,7 +46,8 @@ export interface Service {
 }
 
 export interface Reminder {
-  id: string
+  _id?: string // MongoDB ID
+  id?: string // For backward compatibility
   serviceId: string // Reference to the service that needs a reminder
   vehicleId: string // Reference to the vehicle
   customerId: string // Reference to the customer

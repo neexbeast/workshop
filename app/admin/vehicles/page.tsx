@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
 import { useVehicles, useCustomer } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import Link from 'next/link'
 
 export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -179,9 +180,9 @@ export default function VehiclesPage() {
           <div className="flex items-center space-x-4">
             {customer && (
               <Button variant="ghost" size="icon" asChild>
-                <a href="/admin/customers">
+                <Link href="/admin/customers/" className="text-blue-600 hover:text-blue-800">
                   <ArrowLeft className="h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             )}
             <h1 className="text-3xl font-bold tracking-tight">
@@ -189,10 +190,10 @@ export default function VehiclesPage() {
             </h1>
           </div>
           <Button asChild>
-            <a href="/admin/vehicles/add">
+            <Link href="/admin/vehicles/add/" className="bg-primary text-white px-4 py-2 rounded-md">
               <Plus className="mr-2 h-4 w-4" />
               Add Vehicle
-            </a>
+            </Link>
           </Button>
         </div>
 

@@ -4,15 +4,25 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/worksh
 const MONGODB_DB = process.env.MONGODB_DB || "workshop-service"
 
 // Check if we're in a production environment
-const isProd = process.env.NODE_ENV === "production"
+// const isProd = process.env.NODE_ENV === "production"
 
 interface CachedConnection {
   client: MongoClient | null
   db: Db | null
 }
 
+// Add global type declaration
+declare global {
+  interface Global {
+    mongo: {
+      client: MongoClient | null;
+      db: Db | null;
+    } | undefined;
+  }
+}
+
 // Cache the MongoDB connection to avoid creating new connections for each request
-let cached: CachedConnection = global.mongo as CachedConnection
+let cached: CachedConnection = (global.mongo as CachedConnection) || { client: null, db: null }
 
 if (!cached) {
   cached = global.mongo = { client: null, db: null }

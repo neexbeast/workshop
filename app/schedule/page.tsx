@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ClientLayout } from "@/components/client/client-layout"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -57,7 +57,7 @@ export default function SchedulePage() {
   const router = useRouter()
 
   // Fetch user's vehicles
-  const fetchVehicles = async () => {
+  const fetchVehicles = useCallback(async () => {
     if (!auth.firebaseUser) return
 
     setIsLoadingVehicles(true)
@@ -97,10 +97,10 @@ export default function SchedulePage() {
     } finally {
       setIsLoadingVehicles(false)
     }
-  }
+  }, [auth.firebaseUser, toast]);
 
   // Fetch available time slots
-  const fetchTimeSlots = async (date: Date) => {
+  const fetchTimeSlots = useCallback(async (date: Date) => {
     if (!auth.firebaseUser) return
 
     setIsLoadingSlots(true)
@@ -131,19 +131,19 @@ export default function SchedulePage() {
     } finally {
       setIsLoadingSlots(false)
     }
-  }
+  }, [auth.firebaseUser, toast]);
 
   // Effect to fetch vehicles when component mounts
   useEffect(() => {
     if (auth.user) {
       fetchVehicles()
     }
-  }, [auth.user])
+  }, [auth.user, fetchVehicles])
 
   // Effect to fetch time slots when date changes
   useEffect(() => {
     fetchTimeSlots(selectedDate)
-  }, [selectedDate])
+  }, [selectedDate, fetchTimeSlots])
 
   const handleScheduleService = async () => {
     if (!auth.firebaseUser) {

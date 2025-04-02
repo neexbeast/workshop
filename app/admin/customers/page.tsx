@@ -13,10 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-react"
+import { Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useToast } from "@/hooks/use-toast"
-import type { Customer } from "@/lib/mongodb/models"
+import Link from 'next/link'
 import { useCustomers, useDeleteCustomer } from "@/lib/api/hooks"
 
 export default function CustomersPage() {
@@ -60,12 +60,9 @@ export default function CustomersPage() {
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-          <Button asChild>
-            <a href="/admin/customers/add">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Customer
-            </a>
-          </Button>
+          <Link href="/admin/customers/add/" className="bg-primary text-white px-4 py-2 rounded-md">
+            Add Customer
+          </Link>
         </div>
 
         <div className="flex items-center space-x-2">

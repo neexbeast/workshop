@@ -9,6 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Mail, AlertTriangle, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+interface ApiError {
+  message: string;
+}
+
 export function SendReminders() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{
@@ -24,7 +28,7 @@ export function SendReminders() {
     setResult(null)
 
     try {
-      const response = await remindersApi.sendReminders(user)
+      const response = await remindersApi.sendReminder(user)
 
       setResult({
         success: true,
@@ -36,16 +40,17 @@ export function SendReminders() {
         title: "Reminders sent",
         description: `Successfully sent ${response.count} service reminders.`,
       })
-    } catch (err: any) {
+    } catch (error) {
+      const apiError = error as ApiError;
       setResult({
         success: false,
-        message: err.message || "Failed to send reminders. Please try again.",
+        message: apiError.message || "An unexpected error occurred",
       })
 
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to send service reminders.",
+        title: "Error sending reminders",
+        description: apiError.message || "An unexpected error occurred",
       })
     } finally {
       setIsLoading(false)

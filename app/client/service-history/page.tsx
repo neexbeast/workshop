@@ -11,6 +11,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileText, Search, Filter, Calendar, Wrench } from "lucide-react"
 
+interface Service {
+  id: string;
+  vehicleId: string;
+  vehicle: string;
+  serviceType: string;
+  date: string;
+  mileage: number;
+  description: string;
+  cost: number;
+  technician: string;
+}
+
 // Mock data for service history
 const mockServiceHistory = [
   {
@@ -80,7 +92,7 @@ const mockVehicles = [
 export default function ServiceHistoryPage() {
   const [selectedVehicle, setSelectedVehicle] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedService, setSelectedService] = useState<any>(null)
+  const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // Filter service history based on selected vehicle and search query
@@ -91,7 +103,7 @@ export default function ServiceHistoryPage() {
         service.description.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
-  const handleServiceClick = (service: any) => {
+  const handleServiceClick = (service: Service) => {
     setSelectedService(service)
     setIsDialogOpen(true)
   }
@@ -184,7 +196,7 @@ export default function ServiceHistoryPage() {
               <CardContent>
                 <div className="relative border-l border-muted pl-6 ml-6">
                   {filteredHistory.length > 0 ? (
-                    filteredHistory.map((service, index) => (
+                    filteredHistory.map((service) => (
                       <div key={service.id} className="mb-10 relative">
                         <div className="absolute w-4 h-4 bg-primary rounded-full -left-[30px] top-1 border-4 border-background"></div>
                         <div className="flex flex-col space-y-2">

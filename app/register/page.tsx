@@ -14,6 +14,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Loader2 } from "lucide-react"
 import type { UserRole } from "@/lib/firebase/auth-provider"
+import { toast } from "@/components/ui/use-toast"
+
+interface FirebaseError {
+  code: string;
+  message: string;
+}
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
@@ -46,9 +52,14 @@ export default function RegisterPage() {
       } else {
         router.push("/client/dashboard")
       }
-    } catch (err: any) {
-      console.error("Sign up error:", err)
-      setError(err.message || "Failed to create an account")
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: firebaseError.message,
+      });
+      setError(firebaseError.message)
     } finally {
       setIsLoading(false)
     }

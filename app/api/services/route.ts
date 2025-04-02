@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     // Build the query
     type MongoQuery = {
-      [key: string]: any;
+      [key: string]: string | RegExp | { $regex: string, $options: string } | { $in: string[] } | { $or: Array<{ [key: string]: { $regex: string, $options: string } }> };
     }
     
     const query: MongoQuery = {}

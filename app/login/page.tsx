@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
+
+interface FirebaseError {
+  code: string;
+  message: string;
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -39,9 +45,14 @@ export default function LoginPage() {
         console.log("Redirecting to client dashboard")
         router.push("/client/dashboard")
       }
-    } catch (err: any) {
-      console.error("Sign in error:", err)
-      setError(err.message || "Failed to sign in. Please check your credentials.")
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: firebaseError.message,
+      });
+      setError(firebaseError.message || "Failed to sign in. Please check your credentials.")
     } finally {
       setIsLoading(false)
     }

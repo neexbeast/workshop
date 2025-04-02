@@ -1,4 +1,27 @@
-export async function decodeVIN(vin: string) {
+interface VinApiResponse {
+  Results: Array<{
+    Value: string;
+    ValueId: string;
+    Variable: string;
+    VariableId: number;
+  }>;
+}
+
+interface DecodedVin {
+  make: string;
+  model: string;
+  year: string;
+  trim?: string;
+  engine?: string;
+  bodyType?: string;
+  transmission?: string;
+  fuelType?: string;
+  vehicleType?: string;
+  plantCity?: string;
+  plantCountry?: string;
+}
+
+export async function decodeVin(vin: string): Promise<DecodedVin> {
   try {
     // Use the NHTSA API to decode the VIN
     const response = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`)
@@ -7,14 +30,18 @@ export async function decodeVIN(vin: string) {
       throw new Error("Failed to decode VIN")
     }
 
-    const data = await response.json()
+    const data = await response.json() as VinApiResponse
 
     // Extract relevant vehicle information
     const results = data.Results
-    const vehicleInfo: any = {}
+    const vehicleInfo: DecodedVin = {
+      make: "",
+      model: "",
+      year: ""
+    }
 
     // Map the API response to our vehicle model
-    results.forEach((result: any) => {
+    results.forEach((result) => {
       const { Variable, Value } = result
 
       if (Value && Value !== "Not Applicable") {
@@ -26,7 +53,7 @@ export async function decodeVIN(vin: string) {
             vehicleInfo.model = Value
             break
           case "Model Year":
-            vehicleInfo.year = Number.parseInt(Value)
+            vehicleInfo.year = Value
             break
           case "Body Class":
             vehicleInfo.bodyType = Value
@@ -53,16 +80,10 @@ export async function decodeVIN(vin: string) {
       }
     })
 
-    return {
-      success: true,
-      data: vehicleInfo,
-    }
+    return vehicleInfo
   } catch (error) {
     console.error("Error decoding VIN:", error)
-    return {
-      success: false,
-      error: "Failed to decode VIN. Please check the VIN and try again.",
-    }
+    throw new Error("Failed to decode VIN")
   }
 }
 
@@ -144,4 +165,6 @@ export function extractBasicVINInfo(vin: string) {
     modelYear,
   }
 }
+
+export const decodeVIN = decodeVin;
 

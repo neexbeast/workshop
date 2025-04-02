@@ -3,60 +3,39 @@
 import type React from "react"
 import { createContext, useEffect, useState, useCallback } from "react"
 import {
-  type User as FirebaseUser,
-  onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  updateProfile,
+  onAuthStateChanged,
+  type User as FirebaseUser,
 } from "firebase/auth"
 import { auth } from "./firebase-config"
 
 export type UserRole = "admin" | "worker" | "client"
 
-export interface User extends FirebaseUser {
+export interface AuthUser extends FirebaseUser {
   role: UserRole
 }
 
 interface AuthContextType {
-  user: User | null
+  user: AuthUser | null
   firebaseUser: FirebaseUser | null
   loading: boolean
   error: string | null
-  signIn: (email: string, password: string) => Promise<User>
-  signUp: (email: string, password: string, role: UserRole) => Promise<User>
+  signIn: (email: string, password: string) => Promise<AuthUser>
+  signUp: (email: string, password: string, role: UserRole) => Promise<AuthUser>
   signOut: () => Promise<void>
   refreshToken: () => Promise<string | null>
 }
 
-// Helper functions for role management
-const getRoleFromDisplayName = (displayName: string | null): UserRole => {
-  console.log("Getting role from displayName:", displayName)
-  if (!displayName) return "client"
-
-  // Format is expected to be "role:value"
-  const parts = displayName.split(":")
-  const rolePart = parts[0]
-  console.log("Extracted role part:", rolePart)
-
-  if (rolePart === "admin" || rolePart === "worker") {
-    return rolePart
-  }
-  return "client"
-}
-
-const createDisplayNameWithRole = (role: UserRole): string => {
-  return `${role}:user`
-}
-
-const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<User | null> => {
+const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<AuthUser | null> => {
   if (!firebaseUser) return null
 
   // Get the ID token result which includes custom claims
   const idTokenResult = await firebaseUser.getIdTokenResult()
   const role = (idTokenResult.claims.role as UserRole) || "client"
 
-  return { ...firebaseUser, role } as User
+  return { ...firebaseUser, role } as AuthUser
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -79,7 +58,7 @@ export const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -183,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signOut = async () => {
+  const signOutUser = async () => {
     try {
       setError(null)
       setLoading(true)
@@ -214,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         signIn,
         signUp,
-        signOut,
+        signOut: signOutUser,
         refreshToken,
       }}
     >

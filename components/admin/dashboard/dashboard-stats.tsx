@@ -32,10 +32,10 @@ export function DashboardStats() {
         setLoading(true)
 
         const [customersResponse, vehiclesResponse, servicesResponse, remindersResponse] = await Promise.all([
-          customersApi.getCustomers(firebaseUser),
-          vehiclesApi.getVehicles(firebaseUser),
-          servicesApi.getServices(firebaseUser),
-          remindersApi.getReminders(firebaseUser, undefined, true),
+          customersApi.getCustomers({ firebaseUser }),
+          vehiclesApi.getVehicles({ firebaseUser }),
+          servicesApi.getServices({ firebaseUser }),
+          remindersApi.getReminders({ firebaseUser }, undefined, true),
         ])
 
         setStats({

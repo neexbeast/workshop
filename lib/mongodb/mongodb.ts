@@ -3,9 +3,6 @@ import { MongoClient, type Db } from "mongodb"
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/workshop-service"
 const MONGODB_DB = process.env.MONGODB_DB || "workshop-service"
 
-// Check if we're in a production environment
-const isProd = process.env.NODE_ENV === "production"
-
 interface CachedConnection {
   client: MongoClient | null
   db: Db | null

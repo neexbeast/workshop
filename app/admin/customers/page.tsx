@@ -17,7 +17,6 @@ import {
 import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useToast } from "@/hooks/use-toast"
-import type { Customer } from "@/lib/mongodb/models"
 import { useCustomers, useDeleteCustomer } from "@/lib/api/hooks"
 
 export default function CustomersPage() {

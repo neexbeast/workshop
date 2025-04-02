@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X } from "lucide-react"
+import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X, Calendar } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -59,6 +59,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
   const navigation = [
     { name: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
+    { name: "Schedule Service", href: "/schedule", icon: Calendar },
     { name: "My Vehicles", href: "/client/vehicles", icon: Car },
     { name: "Service History", href: "/client/service-history", icon: FileText },
     { name: "Reminders", href: "/client/reminders", icon: Bell },

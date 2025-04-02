@@ -1,7 +1,9 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb/mongodb"
 import { getAuth } from "firebase-admin/auth"
 import { initializeApp, getApps, cert } from "firebase-admin/app"
+import { ObjectId } from "mongodb"
+import type { Customer } from "@/lib/mongodb/models"
 
 // Initialize Firebase Admin SDK if it hasn't been initialized
 if (!getApps().length) {
@@ -10,6 +12,17 @@ if (!getApps().length) {
   initializeApp({
     credential: cert(serviceAccount),
   })
+}
+
+interface CustomerDocument extends Omit<Customer, "id"> {
+  _id: ObjectId
+}
+
+interface CustomerQuery {
+  $or?: Array<{
+    [key: string]: { $regex: string; $options: string }
+  }>
+  userId?: string
 }
 
 // Middleware to verify Firebase token
@@ -51,7 +64,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build the query
-    const query: any = {}
+    const query: CustomerQuery = {}
 
     // If search parameter is provided, search in name, email, and phone
     if (search) {
@@ -69,18 +82,30 @@ export async function GET(req: NextRequest) {
 
     // Get customers from the database
     const customers = await db
-      .collection("customers")
+      .collection<CustomerDocument>("customers")
       .find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
       .toArray()
 
+    // Transform _id to id for each customer
+    const transformedCustomers = customers.map(customer => ({
+      id: customer._id.toString(),
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      userId: customer.userId,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt
+    }))
+
     // Get total count for pagination
     const total = await db.collection("customers").countDocuments(query)
 
     return NextResponse.json({
-      customers,
+      customers: transformedCustomers,
       pagination: {
         total,
         page,

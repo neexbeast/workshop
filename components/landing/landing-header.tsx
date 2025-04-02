@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { Loader2 } from "lucide-react"
+import { Loader2, Calendar } from "lucide-react"
 
 export function LandingHeader() {
   const { user, loading } = useAuth()
@@ -23,9 +23,19 @@ export function LandingHeader() {
               Loading
             </Button>
           ) : user ? (
-            <Button asChild>
-              <Link href={user.role === "admin" ? "/admin/dashboard" : "/client/dashboard"}>Dashboard</Link>
-            </Button>
+            <>
+              {user.role === "client" && (
+                <Button variant="outline" asChild>
+                  <Link href="/schedule">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule Service
+                  </Link>
+                </Button>
+              )}
+              <Button asChild>
+                <Link href={user.role === "admin" ? "/admin/dashboard" : "/client/dashboard"}>Dashboard</Link>
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="outline" asChild>

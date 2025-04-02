@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { servicesApi, vehiclesApi } from "@/lib/api/api-client"
+import { servicesApi } from "@/lib/api/api-client"
+import { vehiclesApi } from "@/lib/api/api-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +22,7 @@ import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import type { Service, Vehicle } from "@/lib/mongodb/models"
 
 // Service types for dropdown
 const serviceTypes = [
@@ -37,16 +39,7 @@ const serviceTypes = [
 ]
 
 interface ServiceFormProps {
-  service?: {
-    id: string
-    vehicleId: string
-    serviceType: string
-    serviceDate: Date
-    mileage: number
-    description: string
-    parts?: string[]
-    cost: number
-  }
+  service?: Service
   vehicleId?: string
   onSuccess?: () => void
   isEdit?: boolean
@@ -68,26 +61,26 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
   })
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [vehicles, setVehicles] = useState<any[]>([])
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false)
-  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
-  const { user } = useAuth()
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
+  const auth = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
   useEffect(() => {
     const fetchVehicles = async () => {
-      if (!user) return
+      if (!auth.user) return
 
       setIsLoadingVehicles(true)
       try {
-        const response = await vehiclesApi.getVehicles(user)
+        const response = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser })
         setVehicles(response.vehicles || [])
 
         // If we have a vehicleId, find and set the selected vehicle
         if (vehicleId || service?.vehicleId) {
           const id = vehicleId || service?.vehicleId
-          const vehicle = response.vehicles.find((v: any) => v._id === id)
+          const vehicle = response.vehicles.find((v) => v.id === id)
           if (vehicle) {
             setSelectedVehicle(vehicle)
             setFormData((prev) => ({
@@ -98,13 +91,14 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
         }
       } catch (err) {
         console.error("Error fetching vehicles:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch vehicles")
       } finally {
         setIsLoadingVehicles(false)
       }
     }
 
     fetchVehicles()
-  }, [user, vehicleId, service?.vehicleId])
+  }, [auth.user, auth.firebaseUser, vehicleId, service?.vehicleId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -116,7 +110,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
 
     // If vehicle is changed, update the mileage
     if (name === "vehicleId") {
-      const vehicle = vehicles.find((v) => v._id === value)
+      const vehicle = vehicles.find((v) => v.id === value)
       if (vehicle) {
         setSelectedVehicle(vehicle)
         setFormData((prev) => ({
@@ -159,30 +153,31 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
       const serviceData = {
         vehicleId: formData.vehicleId,
         serviceType: formData.serviceType,
-        serviceDate: formData.serviceDate.toISOString(),
+        serviceDate: formData.serviceDate,
         mileage: formData.mileage,
         description: formData.description,
         parts: formData.parts ? formData.parts.split(",").map((part) => part.trim()) : [],
         cost: formData.cost,
+        technicianId: auth.firebaseUser?.uid || "",
       }
 
       // Add reminder data if reminder is set
       if (formData.setReminder) {
         Object.assign(serviceData, {
-          reminderDate: formData.reminderDate?.toISOString(),
+          reminderDate: formData.reminderDate,
           reminderType: formData.reminderType,
           mileageThreshold: formData.mileageThreshold,
         })
       }
 
       if (isEdit && service) {
-        await servicesApi.updateService(user, service.id, serviceData)
+        await servicesApi.updateService({ firebaseUser: auth.firebaseUser }, service.id, serviceData)
         toast({
           title: "Service updated",
           description: "Service record has been updated successfully.",
         })
       } else {
-        await servicesApi.createService(user, serviceData)
+        await servicesApi.createService({ firebaseUser: auth.firebaseUser }, serviceData)
         toast({
           title: "Service added",
           description: "New service record has been added successfully.",
@@ -195,8 +190,8 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
         router.push("/admin/services")
         router.refresh()
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -238,7 +233,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                   </div>
                 ) : (
                   vehicles.map((vehicle) => (
-                    <SelectItem key={vehicle._id} value={vehicle._id}>
+                    <SelectItem key={vehicle.id} value={vehicle.id}>
                       {vehicle.make} {vehicle.model} ({vehicle.year}) - {vehicle.vin}
                     </SelectItem>
                   ))

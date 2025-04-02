@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import type { Customer } from "@/lib/mongodb/models"
 
 interface VehicleFormProps {
   vehicle?: {
@@ -45,10 +46,10 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
     customerId: vehicle?.customerId || customerId || "",
     mileage: vehicle?.mileage || 0,
   })
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [isLookingUpVIN, setIsLookingUpVIN] = useState(false)
-  const [customers, setCustomers] = useState<any[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false)
   const auth = useAuth()
   const router = useRouter()
@@ -64,6 +65,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         setCustomers(response.customers || [])
       } catch (err) {
         console.error("Error fetching customers:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch customers")
       } finally {
         setIsLoadingCustomers(false)
       }
@@ -111,8 +113,9 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
       } else {
         setError(result.error || "Failed to decode VIN. Please enter details manually.")
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during VIN lookup. Please try again.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      console.error(err)
     } finally {
       setIsLookingUpVIN(false)
     }
@@ -144,8 +147,8 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         router.push("/admin/vehicles")
         router.refresh()
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -260,7 +263,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
                   </div>
                 ) : (
                   customers.map((customer) => (
-                    <SelectItem key={customer._id} value={customer._id}>
+                    <SelectItem key={customer.id} value={customer.id}>
                       {customer.name} ({customer.email})
                     </SelectItem>
                   ))

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,329 +13,112 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Search, MoreHorizontal, Edit, Trash, FileText, Bell } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-
-// Mock data for services
-const mockServices = [
-  {
-    id: "1",
-    vehicleId: "1",
-    vehicle: "Honda Accord (2020)",
-    vin: "1HGCM82633A123456",
-    owner: "John Doe",
-    serviceType: "Oil Change",
-    date: "2023-10-15",
-    mileage: 25000,
-    description: "Full synthetic oil change with filter replacement",
-    cost: 89.99,
-    reminderSet: true,
-    reminderDate: "2024-04-15",
-  },
-  {
-    id: "2",
-    vehicleId: "2",
-    vehicle: "Tesla Model S (2021)",
-    vin: "5YJSA1E47MF123456",
-    owner: "Jane Smith",
-    serviceType: "Tire Rotation",
-    date: "2023-11-20",
-    mileage: 15000,
-    description: "Rotated all four tires and checked pressure",
-    cost: 49.99,
-    reminderSet: false,
-    reminderDate: null,
-  },
-  {
-    id: "3",
-    vehicleId: "3",
-    vehicle: "BMW X5 (2019)",
-    vin: "WBAJB0C51BC123456",
-    owner: "Bob Johnson",
-    serviceType: "Brake Replacement",
-    date: "2023-09-05",
-    mileage: 35000,
-    description: "Replaced front brake pads and rotors",
-    cost: 349.99,
-    reminderSet: true,
-    reminderDate: "2024-09-05",
-  },
-  {
-    id: "4",
-    vehicleId: "4",
-    vehicle: "Chevrolet Cruze (2018)",
-    vin: "1G1JC5SH4D4123456",
-    owner: "Alice Brown",
-    serviceType: "Air Filter Replacement",
-    date: "2023-08-12",
-    mileage: 45000,
-    description: "Replaced cabin and engine air filters",
-    cost: 59.99,
-    reminderSet: false,
-    reminderDate: null,
-  },
-  {
-    id: "5",
-    vehicleId: "5",
-    vehicle: "Nissan Leaf (2022)",
-    vin: "JN1AZ0CP8BT123456",
-    owner: "Charlie Davis",
-    serviceType: "Battery Check",
-    date: "2023-12-01",
-    mileage: 8000,
-    description: "Performed diagnostic check on EV battery system",
-    cost: 79.99,
-    reminderSet: true,
-    reminderDate: "2024-06-01",
-  },
-]
-
-// Mock data for vehicles (for the dropdown)
-const mockVehicles = [
-  { id: "1", name: "Honda Accord (2020)", vin: "1HGCM82633A123456", owner: "John Doe" },
-  { id: "2", name: "Tesla Model S (2021)", vin: "5YJSA1E47MF123456", owner: "Jane Smith" },
-  { id: "3", name: "BMW X5 (2019)", vin: "WBAJB0C51BC123456", owner: "Bob Johnson" },
-  { id: "4", name: "Chevrolet Cruze (2018)", vin: "1G1JC5SH4D4123456", owner: "Alice Brown" },
-  { id: "5", name: "Nissan Leaf (2022)", vin: "JN1AZ0CP8BT123456", owner: "Charlie Davis" },
-]
-
-// Service types for dropdown
-const serviceTypes = [
-  "Oil Change",
-  "Tire Rotation",
-  "Brake Replacement",
-  "Air Filter Replacement",
-  "Battery Check",
-  "Transmission Service",
-  "Coolant Flush",
-  "Spark Plug Replacement",
-  "Timing Belt Replacement",
-  "General Inspection",
-]
+import { Plus, Search, MoreHorizontal, Edit, Trash, ArrowLeft, Loader2 } from "lucide-react"
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { servicesApi, vehiclesApi, customersApi } from "@/lib/api/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { useSearchParams } from "next/navigation"
+import Link from "next/link"
+import type { Service, Vehicle, Customer } from "@/lib/mongodb/models"
+import { format } from "date-fns"
 
 export default function ServicesPage() {
-  const [services, setServices] = useState(mockServices)
+  const [services, setServices] = useState<Service[]>([])
+  const [vehicles, setVehicles] = useState<{ [key: string]: Vehicle }>({})
+  const [customers, setCustomers] = useState<{ [key: string]: Customer }>({})
   const [searchQuery, setSearchQuery] = useState("")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [newService, setNewService] = useState({
-    vehicleId: "",
-    serviceType: "",
-    mileage: 0,
-    description: "",
-    cost: 0,
-    reminderSet: false,
-    reminderMonths: 6,
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
+  const auth = useAuth()
+  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const vehicleId = searchParams.get("vehicleId") || undefined
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!auth.user) return
+
+      setIsLoading(true)
+      try {
+        // Fetch services, filtered by vehicleId if provided
+        const servicesResponse = await servicesApi.getServices({ firebaseUser: auth.firebaseUser }, undefined, vehicleId)
+        setServices(servicesResponse.services || [])
+
+        // Fetch all vehicles and customers to display their details
+        const vehiclesResponse = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser })
+        const vehiclesMap = vehiclesResponse.vehicles.reduce((acc, vehicle) => {
+          acc[vehicle.id] = vehicle
+          return acc
+        }, {} as { [key: string]: Vehicle })
+        setVehicles(vehiclesMap)
+
+        const customersResponse = await customersApi.getCustomers({ firebaseUser: auth.firebaseUser })
+        const customersMap = customersResponse.customers.reduce((acc, customer) => {
+          acc[customer.id] = customer
+          return acc
+        }, {} as { [key: string]: Customer })
+        setCustomers(customersMap)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        setError(error instanceof Error ? error.message : "Failed to fetch data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [auth.user, auth.firebaseUser, vehicleId])
 
   const filteredServices = services.filter(
     (service) =>
-      service.vehicle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.vin.toLowerCase().includes(searchQuery.toLowerCase()),
+      service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicles[service.vehicleId]?.vin.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicles[service.vehicleId]?.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicles[service.vehicleId]?.model.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleAddService = () => {
-    const id = (services.length + 1).toString()
-    const date = new Date().toISOString().split("T")[0]
-
-    // Calculate reminder date if reminder is set
-    let reminderDate = null
-    if (newService.reminderSet) {
-      const reminder = new Date()
-      reminder.setMonth(reminder.getMonth() + newService.reminderMonths)
-      reminderDate = reminder.toISOString().split("T")[0]
+  const handleDeleteService = async (id: string) => {
+    if (!auth.user) return
+    
+    try {
+      await servicesApi.deleteService({ firebaseUser: auth.firebaseUser }, id)
+      setServices(services.filter((service) => service.id !== id))
+      toast({
+        title: "Success",
+        description: "Service deleted successfully",
+      })
+    } catch (error) {
+      console.error("Error deleting service:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete service. Please try again.",
+        variant: "destructive",
+      })
     }
-
-    // Find the selected vehicle details
-    const selectedVehicle = mockVehicles.find((v) => v.id === newService.vehicleId)
-
-    if (selectedVehicle) {
-      setServices([
-        ...services,
-        {
-          ...newService,
-          id,
-          date,
-          reminderDate,
-          vehicle: selectedVehicle.name,
-          vin: selectedVehicle.vin,
-          owner: selectedVehicle.owner,
-        },
-      ])
-    }
-
-    // Reset form
-    setNewService({
-      vehicleId: "",
-      serviceType: "",
-      mileage: 0,
-      description: "",
-      cost: 0,
-      reminderSet: false,
-      reminderMonths: 6,
-    })
-
-    setIsAddDialogOpen(false)
-  }
-
-  const handleDeleteService = (id: string) => {
-    setServices(services.filter((service) => service.id !== id))
   }
 
   return (
     <AdminLayout>
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Services</h1>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Service
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
-              <DialogHeader>
-                <DialogTitle>Add New Service</DialogTitle>
-                <DialogDescription>Record a new service for a vehicle in your database.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="vehicle" className="text-right">
-                    Vehicle
-                  </Label>
-                  <Select
-                    value={newService.vehicleId}
-                    onValueChange={(value) => setNewService({ ...newService, vehicleId: value })}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mockVehicles.map((vehicle) => (
-                        <SelectItem key={vehicle.id} value={vehicle.id}>
-                          {vehicle.name} - {vehicle.owner}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="serviceType" className="text-right">
-                    Service Type
-                  </Label>
-                  <Select
-                    value={newService.serviceType}
-                    onValueChange={(value) => setNewService({ ...newService, serviceType: value })}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select service type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {serviceTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="mileage" className="text-right">
-                    Mileage
-                  </Label>
-                  <Input
-                    id="mileage"
-                    type="number"
-                    value={newService.mileage}
-                    onChange={(e) => setNewService({ ...newService, mileage: Number.parseInt(e.target.value) })}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="cost" className="text-right">
-                    Cost
-                  </Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    step="0.01"
-                    value={newService.cost}
-                    onChange={(e) => setNewService({ ...newService, cost: Number.parseFloat(e.target.value) })}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="description" className="text-right pt-2">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={newService.description}
-                    onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                    className="col-span-3"
-                    rows={3}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="text-right">
-                    <Label>Reminder</Label>
-                  </div>
-                  <div className="col-span-3 flex items-center space-x-2">
-                    <Checkbox
-                      id="reminderSet"
-                      checked={newService.reminderSet}
-                      onCheckedChange={(checked) => setNewService({ ...newService, reminderSet: checked as boolean })}
-                    />
-                    <Label htmlFor="reminderSet">Set service reminder</Label>
-                  </div>
-                </div>
-                {newService.reminderSet && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="reminderMonths" className="text-right">
-                      Remind in
-                    </Label>
-                    <Select
-                      value={newService.reminderMonths.toString()}
-                      onValueChange={(value) =>
-                        setNewService({ ...newService, reminderMonths: Number.parseInt(value) })
-                      }
-                    >
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select months" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="3">3 months</SelectItem>
-                        <SelectItem value="6">6 months</SelectItem>
-                        <SelectItem value="9">9 months</SelectItem>
-                        <SelectItem value="12">12 months</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Services</h1>
+            {vehicleId && vehicles[vehicleId] && (
+              <div className="flex items-center space-x-2 text-muted-foreground">
+                <ArrowLeft className="h-4 w-4" />
+                <Link href="/admin/vehicles" className="hover:text-foreground">
+                  Back to Vehicles
+                </Link>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddService}>Add Service</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            )}
+          </div>
+          <Link href={vehicleId ? `/admin/services/add?vehicleId=${vehicleId}` : "/admin/services/add"}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Service
+            </Button>
+          </Link>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -351,83 +134,99 @@ export default function ServicesPage() {
           </div>
         </div>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Service Type</TableHead>
-                <TableHead>Mileage</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Reminder</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredServices.length > 0 ? (
-                filteredServices.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell>{service.date}</TableCell>
-                    <TableCell className="font-medium">{service.vehicle}</TableCell>
-                    <TableCell>{service.owner}</TableCell>
-                    <TableCell>{service.serviceType}</TableCell>
-                    <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                    <TableCell>${service.cost.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {service.reminderSet ? (
-                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                          <Bell className="h-3 w-3 mr-1" />
-                          {service.reminderDate}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">None</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteService(service.id)}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+        {error ? (
+          <div className="text-center text-red-500">{error}</div>
+        ) : isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="flex items-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading services...</span>
+            </div>
+          </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No services found.</div>
+        ) : (
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
-                    No services found.
-                  </TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Service Type</TableHead>
+                  <TableHead>Mileage</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredServices.map((service) => {
+                  const vehicle = vehicles[service.vehicleId]
+                  const customer = vehicle ? customers[vehicle.customerId] : null
+
+                  return (
+                    <TableRow key={service.id}>
+                      <TableCell>{format(new Date(service.serviceDate), "MMM d, yyyy")}</TableCell>
+                      <TableCell>
+                        {vehicle ? (
+                          <div>
+                            <div>
+                              {vehicle.make} {vehicle.model} ({vehicle.year})
+                            </div>
+                            <div className="text-sm text-muted-foreground">{vehicle.vin}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Vehicle not found</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {customer ? (
+                          <div>
+                            <div>{customer.name}</div>
+                            <div className="text-sm text-muted-foreground">{customer.email}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Customer not found</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{service.serviceType}</TableCell>
+                      <TableCell>{service.mileage?.toLocaleString()} km</TableCell>
+                      <TableCell>${service.cost?.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/services/${service.id}`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeleteService(service.id)}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )
-}
-
+} 

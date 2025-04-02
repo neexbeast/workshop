@@ -16,5 +16,4 @@ export default function AddServicePage() {
       </div>
     </AdminLayout>
   )
-}
-
+} 

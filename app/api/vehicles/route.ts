@@ -1,11 +1,27 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { ObjectId } from "mongodb"
+import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb/mongodb"
 import { getAuth } from "firebase-admin/auth"
-import { ObjectId } from "mongodb"
 import type { Vehicle } from "@/lib/mongodb/models"
+
+interface CustomerDocument {
+  _id: ObjectId
+  userId: string
+  // Add other fields as needed
+}
 
 interface VehicleDocument extends Omit<Vehicle, "id"> {
   _id: ObjectId
+  customerId: string
+  make: string
+  model: string
+  year: number
+  vin: string
+  color?: string
+  licensePlate?: string
+  mileage: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 // Middleware to verify Firebase token
@@ -29,54 +45,38 @@ async function verifyAuthToken(req: NextRequest) {
 }
 
 // GET /api/vehicles - Get all vehicles
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Verify the user is authenticated
-    const decodedToken = await verifyAuthToken(req)
-    if (!decodedToken) {
+    // Get authorization header
+    const authHeader = request.headers.get("authorization")
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Connect to the database
-    const { db } = await connectToDatabase()
-
-    const allVehicles = await db.collection("vehicles").find({}).toArray()
-    console.log("All vehicles:", allVehicles);
+    // Verify Firebase token
+    const token = authHeader.split(" ")[1]
+    const decodedToken = await getAuth().verifyIdToken(token)
 
     // Get query parameters
-    const url = new URL(req.url)
-    const search = url.searchParams.get("search") || ""
-    const customerId = url.searchParams.get("customerId") || ""
-    const limit = Number.parseInt(url.searchParams.get("limit") || "50")
-    const page = Number.parseInt(url.searchParams.get("page") || "1")
+    const searchParams = request.nextUrl.searchParams
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
     const skip = (page - 1) * limit
 
-    // Build the query
-    const query: Record<string, any> = {}
+    // Connect to MongoDB
+    const { db } = await connectToDatabase()
 
-    // If search parameter is provided, search in make, model, and VIN
-    if (search) {
-      query.$or = [
-        { make: { $regex: search, $options: "i" } },
-        { model: { $regex: search, $options: "i" } },
-        { vin: { $regex: search, $options: "i" } },
-      ]
-    }
-
-    // If customerId is provided, filter by customer
-    if (customerId && ObjectId.isValid(customerId)) {
-      query.customerId = customerId
-    }
+    // Base query
+    const query: Record<string, unknown> = {}
 
     // For client users, only return vehicles associated with their customer records
     if (decodedToken.role === "client") {
-      // First, get all customers associated with this user
-      const customers = await db.collection("customers").find({ userId: decodedToken.uid }).toArray()
+      // First, get the customer associated with this user
+      const customer = await db.collection("customers").findOne({ userId: decodedToken.uid }) as CustomerDocument | null
+      console.log("Found customer for user:", decodedToken.uid, customer)
 
-      const customerIds = customers.map((customer) => customer._id.toString())
-
-      if (customerIds.length === 0) {
-        // If no customers found, return empty array
+      if (!customer) {
+        console.log("No customer found for user:", decodedToken.uid)
         return NextResponse.json({
           vehicles: [],
           pagination: {
@@ -88,31 +88,28 @@ export async function GET(req: NextRequest) {
         })
       }
 
-      // Add customer filter to query
-      query.customerId = { $in: customerIds }
+      // Get the customer ID as a string
+      const customerId = customer._id.toString()
+      console.log("Filtering vehicles for customer ID:", customerId)
+
+      // Add customer filter to query - exact match on customerId
+      query.customerId = customerId
     }
 
     // Get vehicles from the database
-    const vehicles = await db
-      .collection("vehicles")
-      .find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .toArray() as VehicleDocument[]
+    const vehicles = await db.collection("vehicles").find(query).skip(skip).limit(limit).sort({ createdAt: -1 }).toArray() as VehicleDocument[]
+
+    console.log("Found vehicles:", vehicles)
 
     // Get total count for pagination
     const total = await db.collection("vehicles").countDocuments(query)
 
-    // Transform vehicles to include id instead of _id
-    const transformedVehicles = vehicles.map(vehicle => ({
-      id: vehicle._id.toString(),
-      ...vehicle,
-      _id: undefined
-    }))
-
+    // Return vehicles with pagination info
     return NextResponse.json({
-      vehicles: transformedVehicles,
+      vehicles: vehicles.map((vehicle) => ({
+        ...vehicle,
+        id: vehicle._id.toString(),
+      })),
       pagination: {
         total,
         page,
@@ -121,8 +118,11 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error fetching vehicles:", error)
-    return NextResponse.json({ error: "Failed to fetch vehicles" }, { status: 500 })
+    console.error("Error in vehicles GET:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
 

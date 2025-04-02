@@ -1,0 +1,461 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { AdminLayout } from "@/components/admin/admin-layout"
+import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { useToast } from "@/hooks/use-toast"
+import { format } from "date-fns"
+import { Loader2, Clock, User, Car } from "lucide-react"
+
+// Default working hours
+const defaultWorkingHours = {
+  start: "09:00",
+  end: "17:00",
+  interval: 30,
+}
+
+interface TimeSlot {
+  time: string
+  available: boolean
+}
+
+interface Availability {
+  date: string
+  isBlocked: boolean
+  workingHours: typeof defaultWorkingHours
+  timeSlots: TimeSlot[]
+}
+
+interface Schedule {
+  id: string
+  date: string
+  time: string
+  customerName: string
+  customerEmail: string
+  vehicleInfo: string
+  serviceType: string
+}
+
+export default function AdminSchedulePage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [isDateBlocked, setIsDateBlocked] = useState(false)
+  const [workingHours, setWorkingHours] = useState(defaultWorkingHours)
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false)
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false)
+  const [isEditingHours, setIsEditingHours] = useState(false)
+  const auth = useAuth()
+  const { toast } = useToast()
+
+  // Fetch schedules for the selected date
+  const fetchSchedules = async (date: Date) => {
+    if (!auth.firebaseUser) return
+
+    setIsLoadingSchedules(true)
+    try {
+      const token = await auth.firebaseUser.getIdToken()
+      const response = await fetch(`/api/schedule?date=${format(date, "yyyy-MM-dd")}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch schedules")
+      }
+
+      const data = await response.json()
+      setSchedules(data.schedules || [])
+    } catch (error) {
+      console.error("Error fetching schedules:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch schedules",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingSchedules(false)
+    }
+  }
+
+  // Fetch availability for selected date
+  const fetchAvailability = async (date: Date) => {
+    if (!auth.firebaseUser) return
+
+    setIsLoadingAvailability(true)
+    try {
+      const token = await auth.firebaseUser.getIdToken()
+      const response = await fetch(`/api/availability?date=${format(date, "yyyy-MM-dd")}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch availability")
+      }
+
+      const data: Availability = await response.json()
+      
+      setIsDateBlocked(data.isBlocked)
+      setWorkingHours(data.workingHours || defaultWorkingHours)
+
+      // If we have saved time slots, use them
+      if (data.timeSlots?.length > 0) {
+        setTimeSlots(data.timeSlots)
+      } else {
+        // If no saved time slots, generate new ones with default availability
+        generateTimeSlots(data.workingHours || defaultWorkingHours)
+      }
+    } catch (error) {
+      console.error("Error fetching availability:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch availability settings",
+        variant: "destructive",
+      })
+      // Reset to defaults
+      setIsDateBlocked(false)
+      setWorkingHours(defaultWorkingHours)
+      generateTimeSlots(defaultWorkingHours)
+    } finally {
+      setIsLoadingAvailability(false)
+    }
+  }
+
+  // Generate time slots for the selected date
+  const generateTimeSlots = (hours: typeof defaultWorkingHours) => {
+    const slots: TimeSlot[] = []
+    const [startHour, startMinute] = hours.start.split(":").map(Number)
+    const [endHour, endMinute] = hours.end.split(":").map(Number)
+    
+    let currentTime = new Date(selectedDate)
+    currentTime.setHours(startHour, startMinute, 0, 0)
+    
+    const endTime = new Date(selectedDate)
+    endTime.setHours(endHour, endMinute, 0, 0)
+    
+    while (currentTime < endTime) {
+      slots.push({
+        time: format(currentTime, "HH:mm"),
+        available: true // Default to available for new slots
+      })
+      currentTime = new Date(currentTime.getTime() + hours.interval * 60000)
+    }
+    
+    setTimeSlots(slots)
+  }
+
+  // Effect to fetch availability when date changes
+  useEffect(() => {
+    fetchAvailability(selectedDate)
+  }, [selectedDate, auth.firebaseUser])
+
+  // Effect to fetch schedules when date changes
+  useEffect(() => {
+    fetchSchedules(selectedDate)
+  }, [selectedDate, auth.firebaseUser])
+
+  const handleTimeSlotChange = (checked: boolean, slotTime: string) => {
+    setTimeSlots(slots =>
+      slots.map(s =>
+        s.time === slotTime ? { ...s, available: checked } : s
+      )
+    )
+  }
+
+  const handleSaveAvailability = async () => {
+    if (!auth.firebaseUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save availability",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const token = await auth.firebaseUser.getIdToken()
+      const response = await fetch("/api/availability", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          date: format(selectedDate, "yyyy-MM-dd"),
+          isBlocked: isDateBlocked,
+          workingHours,
+          timeSlots,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save availability")
+      }
+
+      toast({
+        title: "Success",
+        description: "Availability settings have been saved.",
+      })
+    } catch (error) {
+      console.error("Error saving availability:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save availability settings",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSaveWorkingHours = () => {
+    setIsEditingHours(false)
+    // Generate new time slots with the updated working hours
+    generateTimeSlots(workingHours)
+    toast({
+      title: "Success",
+      description: "Working hours have been updated.",
+    })
+  }
+
+  return (
+    <AdminLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Schedule Management</h1>
+          <p className="text-muted-foreground">Manage your shop's availability and view appointments</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Calendar and Working Hours */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Date</CardTitle>
+                <CardDescription>Choose a date to manage availability</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  className="rounded-md border"
+                />
+              </CardContent>
+            </Card>
+
+            {/* Working Hours Card */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle>Working Hours</CardTitle>
+                  <CardDescription>Set your working hours for this date</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingHours(true)}
+                >
+                  Edit Hours
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={isDateBlocked}
+                    onCheckedChange={setIsDateBlocked}
+                    disabled={isLoading}
+                  />
+                  <Label>Block entire day</Label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Start Time</Label>
+                    <p className="text-sm">{workingHours.start}</p>
+                  </div>
+                  <div>
+                    <Label>End Time</Label>
+                    <p className="text-sm">{workingHours.end}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Interval (minutes)</Label>
+                  <p className="text-sm">{workingHours.interval}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Time Slots and Scheduled Appointments */}
+          <div className="space-y-6">
+            {/* Scheduled Appointments Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Scheduled Appointments</CardTitle>
+                <CardDescription>View appointments for {format(selectedDate, "MMMM d, yyyy")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingSchedules ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : schedules.length === 0 ? (
+                  <p className="text-center py-4 text-muted-foreground">
+                    No appointments scheduled for this date.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {schedules.map((schedule) => (
+                      <Card key={schedule.id}>
+                        <CardContent className="pt-6">
+                          <div className="grid gap-2">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              <span>{schedule.time}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{schedule.customerEmail}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Car className="h-4 w-4" />
+                              <span>{schedule.vehicleInfo}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">Service:</span>
+                              <span>{schedule.serviceType}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Time Slots Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Time Slots</CardTitle>
+                <CardDescription>Manage availability for each time slot</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAvailability ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {timeSlots.map((slot) => (
+                      <div key={slot.time} className="flex items-center space-x-2">
+                        <Switch
+                          checked={slot.available}
+                          onCheckedChange={(checked) => handleTimeSlotChange(checked, slot.time)}
+                          disabled={isLoading}
+                        />
+                        <Label>{slot.time}</Label>
+                      </div>
+                    ))}
+
+                    <Button
+                      className="w-full"
+                      onClick={handleSaveAvailability}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Availability"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Working Hours Edit Dialog */}
+        <Dialog open={isEditingHours} onOpenChange={setIsEditingHours}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Working Hours</DialogTitle>
+              <DialogDescription>
+                Set the working hours and interval for this date
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={workingHours.start}
+                    onChange={(e) =>
+                      setWorkingHours((prev) => ({ ...prev, start: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">End Time</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={workingHours.end}
+                    onChange={(e) =>
+                      setWorkingHours((prev) => ({ ...prev, end: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interval">Interval (minutes)</Label>
+                <Select
+                  value={workingHours.interval.toString()}
+                  onValueChange={(value) =>
+                    setWorkingHours((prev) => ({ ...prev, interval: parseInt(value) }))
+                  }
+                >
+                  <SelectTrigger id="interval">
+                    <SelectValue placeholder="Select interval" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="45">45 minutes</SelectItem>
+                    <SelectItem value="60">60 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleSaveWorkingHours}>Save Changes</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
+  )
+} 

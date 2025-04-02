@@ -13,37 +13,50 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/firebase/auth-hooks"
-import { vehiclesApi } from "@/lib/api/api-client"
-import type { Vehicle } from "@/lib/mongodb/models"
+import { vehiclesApi, customersApi } from "@/lib/api/api-client"
+import { useToast } from "@/hooks/use-toast"
+import { useSearchParams } from "next/navigation"
+import type { Vehicle, Customer } from "@/lib/mongodb/models"
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [customer, setCustomer] = useState<Customer | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const auth = useAuth()
+  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const customerId = searchParams.get("customerId") || undefined
 
   useEffect(() => {
-    const fetchVehicles = async () => {
+    const fetchData = async () => {
       if (!auth.user) return
 
       setIsLoading(true)
       try {
-        const response = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser })
+        // If customerId is provided, fetch customer details
+        if (customerId) {
+          const customerResponse = await customersApi.getCustomer({ firebaseUser: auth.firebaseUser }, customerId)
+          setCustomer(customerResponse.customer)
+        }
+
+        // Fetch vehicles, filtered by customerId if provided
+        const response = await vehiclesApi.getVehicles({ firebaseUser: auth.firebaseUser }, undefined, customerId)
         setVehicles(response.vehicles || [])
       } catch (error) {
-        console.error("Error fetching vehicles:", error)
-        setError(error instanceof Error ? error.message : "Failed to fetch vehicles")
+        console.error("Error fetching data:", error)
+        setError(error instanceof Error ? error.message : "Failed to fetch data")
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchVehicles()
-  }, [auth.user, auth.firebaseUser])
+    fetchData()
+  }, [auth.user, auth.firebaseUser, customerId])
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -58,9 +71,17 @@ export default function VehiclesPage() {
     try {
       await vehiclesApi.deleteVehicle({ firebaseUser: auth.firebaseUser }, id)
       setVehicles(vehicles.filter((vehicle) => vehicle.id !== id))
+      toast({
+        title: "Success",
+        description: "Vehicle deleted successfully",
+      })
     } catch (error) {
       console.error("Error deleting vehicle:", error)
-      // You might want to show an error toast here
+      toast({
+        title: "Error",
+        description: "Failed to delete vehicle. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -80,9 +101,28 @@ export default function VehiclesPage() {
     <AdminLayout>
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Vehicles</h1>
+          <div className="space-y-1">
+            {customer ? (
+              <>
+                <div className="flex items-center space-x-4">
+                  <Button variant="ghost" size="sm" className="pl-0" asChild>
+                    <a href="/admin/customers">
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back to Customers
+                    </a>
+                  </Button>
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight">Vehicles for {customer.name}</h1>
+                <p className="text-muted-foreground">
+                  {customer.email} • {customer.phone}
+                </p>
+              </>
+            ) : (
+              <h1 className="text-3xl font-bold tracking-tight">Vehicles</h1>
+            )}
+          </div>
           <Button asChild>
-            <a href="/admin/vehicles/add">
+            <a href={`/admin/vehicles/add${customerId ? `?customerId=${customerId}` : ''}`}>
               <Plus className="mr-2 h-4 w-4" />
               Add Vehicle
             </a>

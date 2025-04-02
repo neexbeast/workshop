@@ -1,5 +1,4 @@
 import type { Customer, Vehicle, Service, Reminder } from "@/lib/mongodb/models"
-import type { User as AuthUser } from "@/lib/firebase/auth-provider"
 import type { User as FirebaseUser } from "firebase/auth"
 
 // Base URL for API requests
@@ -80,7 +79,7 @@ export const customersApi = {
     )
   },
 
-  createCustomer: async (user: AuthUserType, customerData: Omit<Customer, "id" | "createdAt" | "updatedAt">) => {
+  createCustomer: async (user: AuthUserType, customerData: Omit<Customer, "id" | "createdAt" | "updatedAt" | "userId">) => {
     return fetchWithAuth<{ customer: Customer }>(
       `${API_BASE_URL}/customers`,
       {
@@ -91,7 +90,7 @@ export const customersApi = {
     )
   },
 
-  updateCustomer: async (user: AuthUserType, id: string, customerData: Partial<Omit<Customer, "id" | "createdAt" | "updatedAt">>) => {
+  updateCustomer: async (user: AuthUserType, id: string, customerData: Partial<Omit<Customer, "id" | "createdAt" | "updatedAt" | "userId">>) => {
     return fetchWithAuth<{ customer: Customer }>(
       `${API_BASE_URL}/customers/${id}`,
       {

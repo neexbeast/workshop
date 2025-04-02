@@ -36,13 +36,16 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url)
     const search = url.searchParams.get("search") || ""
     const vehicleId = url.searchParams.get("vehicleId") || ""
-    const customerId = url.searchParams.get("customerId") || ""
     const limit = Number.parseInt(url.searchParams.get("limit") || "50")
     const page = Number.parseInt(url.searchParams.get("page") || "1")
     const skip = (page - 1) * limit
 
     // Build the query
-    const query: any = {}
+    type MongoQuery = {
+      [key: string]: any;
+    }
+    
+    const query: MongoQuery = {}
 
     // If search parameter is provided, search in serviceType and description
     if (search) {
@@ -126,8 +129,9 @@ export async function GET(req: NextRequest) {
 
         return {
           ...service,
-          vehicle,
-          customer,
+          id: service._id.toString(),
+          vehicle: vehicle ? { ...vehicle, id: vehicle._id.toString() } : null,
+          customer: customer ? { ...customer, id: customer._id.toString() } : null,
         }
       }),
     )

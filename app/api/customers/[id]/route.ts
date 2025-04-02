@@ -51,7 +51,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized to access this customer" }, { status: 403 })
     }
 
-    return NextResponse.json({ customer })
+    // Transform _id to id
+    const transformedCustomer = {
+      id: customer._id.toString(),
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      userId: customer.userId,
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt
+    }
+
+    return NextResponse.json({ customer: transformedCustomer })
   } catch (error) {
     console.error("Error fetching customer:", error)
     return NextResponse.json({ error: "Failed to fetch customer" }, { status: 500 })

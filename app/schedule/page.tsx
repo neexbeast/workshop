@@ -138,12 +138,12 @@ export default function SchedulePage() {
     if (auth.user) {
       fetchVehicles()
     }
-  }, [auth.user])
+  }, [auth.user, fetchVehicles])
 
   // Effect to fetch time slots when date changes
   useEffect(() => {
     fetchTimeSlots(selectedDate)
-  }, [selectedDate])
+  }, [selectedDate, fetchTimeSlots])
 
   const handleScheduleService = async () => {
     if (!auth.firebaseUser) {

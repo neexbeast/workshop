@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { FirebaseError } from "firebase/app"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -39,9 +40,10 @@ export default function LoginPage() {
         console.log("Redirecting to client dashboard")
         router.push("/client/dashboard")
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Sign in error:", err)
-      setError(err.message || "Failed to sign in. Please check your credentials.")
+      const firebaseError = err as FirebaseError
+      setError(firebaseError.message || "Failed to sign in. Please check your credentials.")
     } finally {
       setIsLoading(false)
     }

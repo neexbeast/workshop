@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { customersApi, vehiclesApi, servicesApi, remindersApi } from "./api-client"
-import type { Customer, Vehicle, Service, Reminder } from "@/lib/mongodb/models"
+import type { Customer } from "@/lib/mongodb/models"
 
 export function useCustomers(search?: string, page = 1, limit = 50) {
   const { firebaseUser } = useAuth()

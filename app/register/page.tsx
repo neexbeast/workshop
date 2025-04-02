@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { FirebaseError } from "firebase/app"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -46,9 +47,10 @@ export default function RegisterPage() {
       } else {
         router.push("/client/dashboard")
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Sign up error:", err)
-      setError(err.message || "Failed to create an account")
+      const firebaseError = err as FirebaseError
+      setError(firebaseError.message || "Failed to create an account")
     } finally {
       setIsLoading(false)
     }

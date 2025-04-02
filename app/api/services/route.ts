@@ -42,7 +42,9 @@ export async function GET(req: NextRequest) {
 
     // Build the query
     type MongoQuery = {
-      [key: string]: any;
+      $or?: Array<{ [key: string]: { $regex: string; $options: string } }>;
+      vehicleId?: string | { $in: string[] };
+      [key: string]: unknown;
     }
     
     const query: MongoQuery = {}

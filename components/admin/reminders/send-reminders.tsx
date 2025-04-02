@@ -9,6 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Mail, AlertTriangle, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+interface ApiError {
+  message: string;
+}
+
 export function SendReminders() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<{
@@ -36,10 +40,11 @@ export function SendReminders() {
         title: "Reminders sent",
         description: `Successfully sent ${response.count} service reminders.`,
       })
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as ApiError
       setResult({
         success: false,
-        message: err.message || "Failed to send reminders. Please try again.",
+        message: error.message || "Failed to send reminders. Please try again.",
       })
 
       toast({

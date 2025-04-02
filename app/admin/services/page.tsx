@@ -177,7 +177,7 @@ export default function ServicesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem asChild>
-                            <Link href={`/admin/services/edit/${service.id}`}>
+                            <Link href={`/admin/services/${service.id}`}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </Link>

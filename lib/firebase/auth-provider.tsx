@@ -8,7 +8,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
-  updateProfile,
 } from "firebase/auth"
 import { auth } from "./firebase-config"
 
@@ -27,26 +26,6 @@ interface AuthContextType {
   signUp: (email: string, password: string, role: UserRole) => Promise<User>
   signOut: () => Promise<void>
   refreshToken: () => Promise<string | null>
-}
-
-// Helper functions for role management
-const getRoleFromDisplayName = (displayName: string | null): UserRole => {
-  console.log("Getting role from displayName:", displayName)
-  if (!displayName) return "client"
-
-  // Format is expected to be "role:value"
-  const parts = displayName.split(":")
-  const rolePart = parts[0]
-  console.log("Extracted role part:", rolePart)
-
-  if (rolePart === "admin" || rolePart === "worker") {
-    return rolePart
-  }
-  return "client"
-}
-
-const createDisplayNameWithRole = (role: UserRole): string => {
-  return `${role}:user`
 }
 
 const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<User | null> => {

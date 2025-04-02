@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,10 +62,10 @@ export default function CustomersPage() {
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
           <Button asChild>
-            <a href="/admin/customers/add">
+            <Link href="/admin/customers/add">
               <Plus className="mr-2 h-4 w-4" />
               Add Customer
-            </a>
+            </Link>
           </Button>
         </div>
 
@@ -119,16 +120,16 @@ export default function CustomersPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem asChild>
-                            <a href={`/admin/customers/${customer.id}`}>
+                            <Link href={`/admin/customers/${customer.id}`}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
-                            </a>
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <a href={`/admin/vehicles?customerId=${customer.id}`}>
+                            <Link href={`/admin/vehicles?customerId=${customer.id}`}>
                               <Car className="h-4 w-4 mr-2" />
                               View Vehicles
-                            </a>
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem

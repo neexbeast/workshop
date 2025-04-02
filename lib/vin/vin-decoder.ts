@@ -1,3 +1,21 @@
+interface VehicleInfo {
+  make?: string;
+  model?: string;
+  year?: number;
+  bodyType?: string;
+  engine?: string;
+  transmission?: string;
+  fuelType?: string;
+  vehicleType?: string;
+  plantCity?: string;
+  plantCountry?: string;
+}
+
+interface NHTSAResult {
+  Variable: string;
+  Value: string | null;
+}
+
 export async function decodeVIN(vin: string) {
   try {
     // Use the NHTSA API to decode the VIN
@@ -11,10 +29,10 @@ export async function decodeVIN(vin: string) {
 
     // Extract relevant vehicle information
     const results = data.Results
-    const vehicleInfo: any = {}
+    const vehicleInfo: VehicleInfo = {}
 
     // Map the API response to our vehicle model
-    results.forEach((result: any) => {
+    results.forEach((result: NHTSAResult) => {
       const { Variable, Value } = result
 
       if (Value && Value !== "Not Applicable") {

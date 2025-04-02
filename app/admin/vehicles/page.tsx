@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { AdminLayout } from "@/components/admin/admin-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -140,16 +141,16 @@ export default function VehiclesPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                          <a href={`/admin/vehicles/${vehicle.id}`}>
+                          <Link href={`/admin/vehicles/${vehicle.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
-                          </a>
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <a href={`/admin/services/add?vehicleId=${vehicle.id}`}>
+                          <Link href={`/admin/services/add?vehicleId=${vehicle.id}`}>
                             <Wrench className="h-4 w-4 mr-2" />
                             Add Service
-                          </a>
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -179,9 +180,9 @@ export default function VehiclesPage() {
           <div className="flex items-center space-x-4">
             {customer && (
               <Button variant="ghost" size="icon" asChild>
-                <a href="/admin/customers">
+                <Link href="/admin/customers">
                   <ArrowLeft className="h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             )}
             <h1 className="text-3xl font-bold tracking-tight">
@@ -189,10 +190,10 @@ export default function VehiclesPage() {
             </h1>
           </div>
           <Button asChild>
-            <a href="/admin/vehicles/add">
+            <Link href="/admin/vehicles/add">
               <Plus className="mr-2 h-4 w-4" />
               Add Vehicle
-            </a>
+            </Link>
           </Button>
         </div>
 

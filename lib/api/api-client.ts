@@ -84,7 +84,7 @@ export const customersApi = {
 
   createCustomer: async (user: AuthUserType, customerData: Omit<Customer, "id" | "createdAt" | "updatedAt" | "userId">) => {
     return fetchWithAuth<{ customer: Customer }>(
-      `${API_BASE_URL}/customers`,
+      `${API_BASE_URL}/admin/create-customer`,
       {
         method: "POST",
         body: JSON.stringify(customerData),

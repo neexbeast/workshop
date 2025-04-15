@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useEffect, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import {
   type User as FirebaseUser,
   onAuthStateChanged,
@@ -15,6 +15,7 @@ export type UserRole = "admin" | "worker" | "client"
 
 export interface User extends FirebaseUser {
   role: UserRole
+  needsPasswordChange?: boolean
 }
 
 interface AuthContextType {
@@ -34,8 +35,11 @@ const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<U
   // Get the ID token result which includes custom claims
   const idTokenResult = await firebaseUser.getIdTokenResult()
   const role = (idTokenResult.claims.role as UserRole) || "client"
+  
+  // Check if the user needs to change their password
+  const needsPasswordChange = firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime
 
-  return { ...firebaseUser, role } as User
+  return { ...firebaseUser, role, needsPasswordChange } as User
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -148,6 +152,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Force token refresh to get the new claims
       await userCredential.user.getIdToken(true)
 
+      // If the user is a client, create a customer record
+      if (role === "client") {
+        const customerResponse = await fetch("/api/auth/register-client", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${await userCredential.user.getIdToken()}`,
+          },
+          body: JSON.stringify({
+            name: email.split("@")[0], // Use email username as default name
+            email,
+            phone: "", // Optional
+            address: "", // Optional
+          }),
+        })
+
+        if (!customerResponse.ok) {
+          const errorData = await customerResponse.json();
+          console.error("Customer creation error:", errorData);
+          throw new Error(errorData.error || "Failed to create customer record");
+        }
+
+        const customerData = await customerResponse.json();
+        console.log("Customer created successfully:", customerData);
+      }
+
       // Get the enhanced user with the new role
       const userWithRole = await enhanceUserWithRole(userCredential.user)
       if (!userWithRole) throw new Error("Failed to enhance user with role")
@@ -200,5 +230,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }
 

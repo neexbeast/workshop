@@ -112,4 +112,66 @@ export function useReminder(id: string) {
     queryFn: () => remindersApi.getReminder({ firebaseUser }, id),
     enabled: !!firebaseUser && !!id,
   })
+}
+
+// Client-specific hooks
+export const useClientVehicles = (customerId?: string) => {
+  const { firebaseUser } = useAuth()
+  return useQuery({
+    queryKey: ["vehicles", "client", customerId],
+    queryFn: () => vehiclesApi.getVehicles({ firebaseUser }, undefined, customerId),
+    enabled: !!firebaseUser && !!customerId,
+  })
+}
+
+export const useClientServices = (customerId?: string) => {
+  const { firebaseUser } = useAuth()
+  return useQuery({
+    queryKey: ["services", "client", customerId],
+    queryFn: async () => {
+      // First get all vehicles for this customer
+      const vehiclesResponse = await vehiclesApi.getVehicles({ firebaseUser }, undefined, customerId)
+      const vehicleIds = vehiclesResponse.vehicles.map(v => v.id)
+      
+      // Then get services for these vehicles
+      const servicesResponse = await servicesApi.getServices({ firebaseUser }, undefined, undefined, 1, 50)
+      const filteredServices = servicesResponse.services.filter(service => vehicleIds.includes(service.vehicleId))
+      
+      return {
+        services: filteredServices,
+        pagination: {
+          ...servicesResponse.pagination,
+          total: filteredServices.length
+        }
+      }
+    },
+    enabled: !!firebaseUser && !!customerId,
+  })
+}
+
+export const useClientReminders = (customerId?: string) => {
+  const { firebaseUser } = useAuth()
+  return useQuery({
+    queryKey: ["reminders", "client", customerId],
+    queryFn: async () => {
+      // First get all vehicles for this customer
+      const vehiclesResponse = await vehiclesApi.getVehicles({ firebaseUser }, undefined, customerId)
+      const vehicleIds = vehiclesResponse.vehicles.map(v => v.id)
+      
+      // Then get reminders for these vehicles
+      const remindersResponse = await remindersApi.getReminders({ firebaseUser }, { upcoming: true })
+      const filteredReminders = remindersResponse.reminders.filter(reminder => 
+        reminder.vehicleId && vehicleIds.includes(reminder.vehicleId)
+      )
+      
+      return {
+        reminders: filteredReminders,
+        pagination: {
+          ...remindersResponse.pagination,
+          total: filteredReminders.length
+        }
+      }
+    },
+    enabled: !!firebaseUser && !!customerId,
+  })
 } 

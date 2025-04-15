@@ -54,8 +54,6 @@ export async function GET(req: NextRequest) {
     // Connect to the database
     const { db } = await connectToDatabase()
 
-    console.log("db", db)
-
     // Get query parameters
     const url = new URL(req.url)
     const search = url.searchParams.get("search") || ""
@@ -117,66 +115,4 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching customers:", error)
     return NextResponse.json({ error: "Failed to fetch customers" }, { status: 500 })
   }
-}
-
-// POST /api/customers - Create a new customer
-export async function POST(req: NextRequest) {
-  try {
-    // Verify the user is authenticated and is an admin or worker
-    const decodedToken = await verifyAuthToken(req)
-    if (!decodedToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    if (decodedToken.role !== "admin" && decodedToken.role !== "worker") {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
-    }
-
-    // Parse the request body
-    const body = await req.json()
-    const { name, email, phone, address } = body
-
-    // Validate required fields
-    if (!name || !email || !phone) {
-      return NextResponse.json({ error: "Name, email, and phone are required" }, { status: 400 })
-    }
-
-    // Connect to the database
-    const { db } = await connectToDatabase()
-
-    // Check if customer with this email already exists
-    const existingCustomer = await db.collection("customers").findOne({ email })
-
-    if (existingCustomer) {
-      return NextResponse.json({ error: "Customer with this email already exists" }, { status: 409 })
-    }
-
-    // Create the new customer
-    const now = new Date()
-    const newCustomer = {
-      name,
-      email,
-      phone,
-      address: address || "",
-      userId: decodedToken.uid,
-      createdAt: now,
-      updatedAt: now,
-    }
-
-    const result = await db.collection("customers").insertOne(newCustomer)
-
-    return NextResponse.json(
-      {
-        customer: {
-          id: result.insertedId,
-          ...newCustomer,
-        },
-      },
-      { status: 201 },
-    )
-  } catch (error) {
-    console.error("Error creating customer:", error)
-    return NextResponse.json({ error: "Failed to create customer" }, { status: 500 })
-  }
-}
-
+} 

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/firebase/auth-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { QueryProvider } from "@/lib/api/query-provider"
+import { PasswordChangeWrapper } from "@/components/auth/password-change-wrapper"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,7 +21,9 @@ export function RootLayoutClient({
         <QueryProvider>
           <AuthProvider>
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-              {children}
+              <PasswordChangeWrapper>
+                {children}
+              </PasswordChangeWrapper>
               <Toaster />
             </ThemeProvider>
           </AuthProvider>

@@ -36,7 +36,8 @@ async function verifyAuthToken(req: NextRequest) {
     const decodedToken = await getAuth().verifyIdToken(token)
 
     // Get role from custom claims
-    const role = decodedToken.role || "client"
+    const role = decodedToken.customClaims?.role || decodedToken.role || "client"
+    console.log("Auth verification:", { uid: decodedToken.uid, role, claims: decodedToken.customClaims })
     return { ...decodedToken, role }
   } catch (error) {
     console.error("Error verifying auth token:", error)

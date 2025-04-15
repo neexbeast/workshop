@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useQueryClient } from "@tanstack/react-query"
 import type { Customer } from "@/lib/mongodb/models"
 
 interface VehicleFormProps {
@@ -54,6 +55,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
   const auth = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -141,11 +143,13 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         })
       }
 
+      // Invalidate the vehicles query cache
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] })
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push("/admin/vehicles")
-        router.refresh()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")

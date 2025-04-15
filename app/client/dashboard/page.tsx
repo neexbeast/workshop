@@ -4,51 +4,46 @@ import { ClientLayout } from "@/components/client/client-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Car, Wrench, Bell, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
-
-// Mock data for client dashboard
-const mockVehicles = [
-  { id: "1", make: "Honda", model: "Accord", year: 2020, lastService: "2023-10-15", mileage: 25000 },
-  { id: "2", make: "Toyota", model: "Camry", year: 2019, lastService: "2023-11-05", mileage: 32000 },
-]
-
-const mockUpcomingServices = [
-  {
-    id: "1",
-    vehicle: "Honda Accord (2020)",
-    serviceType: "Oil Change",
-    dueDate: "2024-04-15",
-    mileageDue: 30000,
-  },
-  {
-    id: "2",
-    vehicle: "Toyota Camry (2019)",
-    serviceType: "Brake Inspection",
-    dueDate: "2024-05-05",
-    mileageDue: 35000,
-  },
-]
-
-const mockRecentServices = [
-  {
-    id: "1",
-    vehicle: "Honda Accord (2020)",
-    serviceType: "Oil Change",
-    date: "2023-10-15",
-    mileage: 25000,
-    cost: 89.99,
-  },
-  {
-    id: "2",
-    vehicle: "Toyota Camry (2019)",
-    serviceType: "Tire Rotation",
-    date: "2023-11-05",
-    mileage: 32000,
-    cost: 49.99,
-  },
-]
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { useClientVehicles, useClientServices, useClientReminders } from "@/lib/api/hooks"
+import { format, subDays, addDays } from "date-fns"
 
 export default function ClientDashboard() {
+  const { firebaseUser } = useAuth()
+  const customerId = firebaseUser?.uid
+
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useClientVehicles(customerId)
+  const { data: servicesData, isLoading: isLoadingServices } = useClientServices(customerId)
+  const { data: remindersData, isLoading: isLoadingReminders } = useClientReminders(customerId)
+
+  const vehicles = vehiclesData?.vehicles || []
+  const services = servicesData?.services || []
+  const reminders = remindersData?.reminders || []
+
+  const today = new Date()
+  const thirtyDaysAgo = subDays(today, 30)
+  const thirtyDaysFromNow = addDays(today, 30)
+
+  // Filter recent services (last 30 days)
+  const recentServices = services
+    .filter(service => {
+      const serviceDate = new Date(service.serviceDate)
+      return serviceDate >= thirtyDaysAgo && serviceDate <= today
+    })
+    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
+
+  // Filter upcoming services (next 30 days)
+  const upcomingServices = services
+    .filter(service => {
+      const serviceDate = new Date(service.serviceDate)
+      return serviceDate > today && serviceDate <= thirtyDaysFromNow
+    })
+    .sort((a, b) => new Date(a.serviceDate).getTime() - new Date(b.serviceDate).getTime())
+
+  const isLoading = isLoadingVehicles || isLoadingServices || isLoadingReminders
+
   return (
     <ClientLayout>
       <div className="flex flex-col space-y-6">
@@ -61,8 +56,14 @@ export default function ClientDashboard() {
               <Car className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockVehicles.length}</div>
-              <p className="text-xs text-muted-foreground">Registered vehicles</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-[100px]" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{vehicles.length}</div>
+                  <p className="text-xs text-muted-foreground">Registered vehicles</p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -71,8 +72,14 @@ export default function ClientDashboard() {
               <Wrench className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockRecentServices.length}</div>
-              <p className="text-xs text-muted-foreground">In the last 30 days</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-[100px]" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{recentServices.length}</div>
+                  <p className="text-xs text-muted-foreground">In the last 30 days</p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -81,21 +88,41 @@ export default function ClientDashboard() {
               <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockUpcomingServices.length}</div>
-              <p className="text-xs text-muted-foreground">Due in the next 30 days</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-[100px]" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{reminders.length}</div>
+                  <p className="text-xs text-muted-foreground">Due in the next 30 days</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Vehicles</CardTitle>
-              <CardDescription>Your registered vehicles</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>My Vehicles</CardTitle>
+            <CardDescription>Your registered vehicles</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
               <div className="space-y-4">
-                {mockVehicles.map((vehicle) => (
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center">
+                    <Skeleton className="h-10 w-10 rounded-full mr-4" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : vehicles.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No vehicles registered.</div>
+            ) : (
+              <div className="space-y-4">
+                {vehicles.map((vehicle) => (
                   <div key={vehicle.id} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="mr-4 rounded-full p-2 bg-muted">
@@ -106,7 +133,7 @@ export default function ClientDashboard() {
                           {vehicle.make} {vehicle.model} ({vehicle.year})
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Last service: {vehicle.lastService} • {vehicle.mileage.toLocaleString()} km
+                          VIN: {vehicle.vin}
                         </p>
                       </div>
                     </div>
@@ -119,27 +146,43 @@ export default function ClientDashboard() {
                   <Link href="/client/vehicles">View All Vehicles</Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Services</CardTitle>
-              <CardDescription>Services due in the next 30 days</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Services</CardTitle>
+            <CardDescription>Services scheduled for the next 30 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
               <div className="space-y-4">
-                {mockUpcomingServices.map((service) => (
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center">
+                    <Skeleton className="h-10 w-10 rounded-full mr-4" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : upcomingServices.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No upcoming services.</div>
+            ) : (
+              <div className="space-y-4">
+                {upcomingServices.map((service) => (
                   <div key={service.id} className="flex items-center">
                     <div className="mr-4 rounded-full p-2 bg-muted">
                       <Calendar className="h-4 w-4" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {service.serviceType} for {service.vehicle}
+                        {service.serviceType}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Due: {service.dueDate} or at {service.mileageDue.toLocaleString()} km
+                        Scheduled for {format(new Date(service.serviceDate), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
@@ -148,9 +191,9 @@ export default function ClientDashboard() {
                   <Link href="/client/reminders">View All Reminders</Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -158,29 +201,45 @@ export default function ClientDashboard() {
             <CardDescription>Your recent service activities</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {mockRecentServices.map((service) => (
-                <div key={service.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="mr-4 rounded-full p-2 bg-muted">
-                      <Wrench className="h-4 w-4" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {service.serviceType} for {service.vehicle}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Completed: {service.date} • {service.mileage.toLocaleString()} km
-                      </p>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center">
+                    <Skeleton className="h-10 w-10 rounded-full mr-4" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[250px]" />
+                      <Skeleton className="h-4 w-[200px]" />
                     </div>
                   </div>
-                  <div className="text-sm font-medium">${service.cost.toFixed(2)}</div>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/client/service-history">View Full History</Link>
-              </Button>
-            </div>
+                ))}
+              </div>
+            ) : recentServices.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No recent services.</div>
+            ) : (
+              <div className="space-y-4">
+                {recentServices.map((service) => (
+                  <div key={service.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="mr-4 rounded-full p-2 bg-muted">
+                        <Wrench className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {service.serviceType}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Completed on {format(new Date(service.serviceDate), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium">${(service.cost ?? 0).toFixed(2)}</div>
+                  </div>
+                ))}
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/client/service-history">View Full History</Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

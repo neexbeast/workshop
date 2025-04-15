@@ -54,6 +54,19 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
 
       await updatePassword(user, newPassword)
       
+      // Clear the temporary password flag
+      const response = await fetch("/api/auth/clear-temporary-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${await user.getIdToken()}`
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to clear temporary password flag")
+      }
+      
       toast({
         title: "Password updated",
         description: "Your password has been changed successfully.",

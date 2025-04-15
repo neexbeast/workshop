@@ -37,7 +37,11 @@ const enhanceUserWithRole = async (firebaseUser: FirebaseUser | null): Promise<U
   const role = (idTokenResult.claims.role as UserRole) || "client"
   
   // Check if the user needs to change their password
-  const needsPasswordChange = firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime
+  // A user needs to change their password if they've never signed in before
+  // or if they're using a temporary password
+  const needsPasswordChange = 
+    firebaseUser.metadata.creationTime === firebaseUser.metadata.lastSignInTime ||
+    (await firebaseUser.getIdTokenResult()).claims.temporaryPassword === true
 
   return { ...firebaseUser, role, needsPasswordChange } as User
 }

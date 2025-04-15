@@ -88,7 +88,10 @@ export async function POST(req: NextRequest) {
 
       // Set custom claims for client role
       console.log("Setting custom claims...")
-      await getAuth().setCustomUserClaims(userRecord.uid, { role: "client" })
+      await getAuth().setCustomUserClaims(userRecord.uid, { 
+        role: "client",
+        temporaryPassword: true 
+      })
       console.log("Custom claims set successfully")
 
       // Send welcome email with temporary password

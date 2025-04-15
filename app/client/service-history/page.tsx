@@ -9,101 +9,49 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { FileText, Search, Filter, Calendar, Wrench } from "lucide-react"
-
-interface ServiceRecord {
-  id: string
-  vehicleId: string
-  vehicle: string
-  serviceType: string
-  date: string
-  mileage: number
-  description: string
-  cost: number
-  technician: string
-}
-
-// Mock data for service history
-const mockServiceHistory = [
-  {
-    id: "1",
-    vehicleId: "1",
-    vehicle: "Honda Accord (2020)",
-    serviceType: "Oil Change",
-    date: "2023-10-15",
-    mileage: 25000,
-    description: "Full synthetic oil change with filter replacement",
-    cost: 89.99,
-    technician: "John Smith",
-  },
-  {
-    id: "2",
-    vehicleId: "1",
-    vehicle: "Honda Accord (2020)",
-    serviceType: "Tire Rotation",
-    date: "2023-07-22",
-    mileage: 22000,
-    description: "Rotated all four tires and checked pressure",
-    cost: 49.99,
-    technician: "Mike Johnson",
-  },
-  {
-    id: "3",
-    vehicleId: "1",
-    vehicle: "Honda Accord (2020)",
-    serviceType: "Brake Inspection",
-    date: "2023-04-10",
-    mileage: 18000,
-    description: "Inspected brake pads, rotors, and brake fluid",
-    cost: 39.99,
-    technician: "John Smith",
-  },
-  {
-    id: "4",
-    vehicleId: "2",
-    vehicle: "Toyota Camry (2019)",
-    serviceType: "Oil Change",
-    date: "2023-11-05",
-    mileage: 32000,
-    description: "Conventional oil change with filter replacement",
-    cost: 69.99,
-    technician: "Sarah Williams",
-  },
-  {
-    id: "5",
-    vehicleId: "2",
-    vehicle: "Toyota Camry (2019)",
-    serviceType: "Air Filter Replacement",
-    date: "2023-08-15",
-    mileage: 28000,
-    description: "Replaced engine and cabin air filters",
-    cost: 59.99,
-    technician: "Mike Johnson",
-  },
-]
-
-// Mock data for vehicles (for the dropdown)
-const mockVehicles = [
-  { id: "all", name: "All Vehicles" },
-  { id: "1", name: "Honda Accord (2020)" },
-  { id: "2", name: "Toyota Camry (2019)" },
-]
+import { FileText, Search, Filter, Calendar, Wrench, Loader2 } from "lucide-react"
+import { useAuth } from "@/lib/firebase/auth-hooks"
+import { useClientServices, useClientVehicles } from "@/lib/api/hooks"
+import { format } from "date-fns"
+import type { Service, Vehicle } from "@/lib/mongodb/models"
 
 export default function ServiceHistoryPage() {
-  const [selectedVehicle, setSelectedVehicle] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedService, setSelectedService] = useState<ServiceRecord | null>(null)
+  const [selectedVehicle, setSelectedVehicle] = useState("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const { firebaseUser } = useAuth()
+  const customerId = firebaseUser?.uid
 
-  // Filter service history based on selected vehicle and search query
-  const filteredHistory = mockServiceHistory.filter(
-    (service) =>
-      (selectedVehicle === "all" || service.vehicleId === selectedVehicle) &&
-      (service.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
+  // Fetch data using React Query
+  const { data: servicesData, isLoading: isLoadingServices } = useClientServices(customerId)
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useClientVehicles(customerId)
 
-  const handleServiceClick = (service: ServiceRecord) => {
+  const services = servicesData?.services || []
+  const vehicles = vehiclesData?.vehicles || []
+
+  const isLoading = isLoadingServices || isLoadingVehicles
+
+  // Create a lookup map for vehicles
+  const vehicleMap = vehicles.reduce((acc, vehicle) => {
+    acc[vehicle.id] = vehicle
+    return acc
+  }, {} as { [key: string]: Vehicle })
+
+  // Filter services based on search query and selected vehicle
+  const filteredServices = services.filter((service) => {
+    const matchesSearch =
+      service.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicleMap[service.vehicleId]?.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicleMap[service.vehicleId]?.model.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesVehicle = selectedVehicle === "all" || service.vehicleId === selectedVehicle
+
+    return matchesSearch && matchesVehicle
+  })
+
+  const handleServiceClick = (service: Service) => {
     setSelectedService(service)
     setIsDialogOpen(true)
   }
@@ -130,9 +78,10 @@ export default function ServiceHistoryPage() {
               <SelectValue placeholder="Filter by vehicle" />
             </SelectTrigger>
             <SelectContent>
-              {mockVehicles.map((vehicle) => (
+              <SelectItem value="all">All Vehicles</SelectItem>
+              {vehicles.map((vehicle) => (
                 <SelectItem key={vehicle.id} value={vehicle.id}>
-                  {vehicle.name}
+                  {vehicle.make} {vehicle.model} ({vehicle.year})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -159,28 +108,41 @@ export default function ServiceHistoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredHistory.length > 0 ? (
-                      filteredHistory.map((service) => (
-                        <TableRow key={service.id}>
-                          <TableCell>{service.date}</TableCell>
-                          <TableCell>{service.vehicle}</TableCell>
-                          <TableCell>{service.serviceType}</TableCell>
-                          <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                          <TableCell>${service.cost.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="sm" onClick={() => handleServiceClick(service)}>
-                              <FileText className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+                    {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                          No service history found.
+                        <TableCell colSpan={6} className="text-center">
+                          <div className="flex justify-center items-center py-4">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          </div>
                         </TableCell>
                       </TableRow>
+                    ) : filteredServices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
+                          No services found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredServices.map((service) => {
+                        const vehicle = vehicleMap[service.vehicleId]
+                        return (
+                          <TableRow key={service.id}>
+                            <TableCell>{format(new Date(service.serviceDate), "PPP")}</TableCell>
+                            <TableCell>
+                              {vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.year})` : "Unknown Vehicle"}
+                            </TableCell>
+                            <TableCell>{service.serviceType}</TableCell>
+                            <TableCell>{service.mileage.toLocaleString()} km</TableCell>
+                            <TableCell>${(service.cost ?? 0).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" onClick={() => handleServiceClick(service)}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Details
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -194,35 +156,45 @@ export default function ServiceHistoryPage() {
                 <CardDescription>Chronological view of all services performed</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="relative border-l border-muted pl-6 ml-6">
-                  {filteredHistory.length > 0 ? (
-                    filteredHistory.map((service) => (
-                      <div key={service.id} className="mb-10 relative">
-                        <div className="absolute w-4 h-4 bg-primary rounded-full -left-[30px] top-1 border-4 border-background"></div>
-                        <div className="flex flex-col space-y-2">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{service.date}</span>
-                          </div>
-                          <h3 className="text-lg font-semibold">{service.serviceType}</h3>
-                          <p className="text-sm">
-                            {service.vehicle} • {service.mileage.toLocaleString()} km
-                          </p>
-                          <p className="text-sm text-muted-foreground">{service.description}</p>
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">${service.cost.toFixed(2)}</span>
-                            <Button variant="outline" size="sm" onClick={() => handleServiceClick(service)}>
-                              <FileText className="h-4 w-4 mr-2" />
-                              Details
-                            </Button>
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : filteredServices.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">No service history found.</div>
+                ) : (
+                  <div className="relative border-l border-muted pl-6 ml-6">
+                    {filteredServices.map((service) => {
+                      const vehicle = vehicleMap[service.vehicleId]
+                      return (
+                        <div key={service.id} className="mb-10 relative">
+                          <div className="absolute w-4 h-4 bg-primary rounded-full -left-[30px] top-1 border-4 border-background"></div>
+                          <div className="flex flex-col space-y-2">
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">
+                                {format(new Date(service.serviceDate), "PPP")}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-semibold">{service.serviceType}</h3>
+                            <p className="text-sm">
+                              {vehicle ? `${vehicle.make} ${vehicle.model} (${vehicle.year})` : "Unknown Vehicle"} •{" "}
+                              {service.mileage.toLocaleString()} km
+                            </p>
+                            <p className="text-sm text-muted-foreground">{service.description}</p>
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">${(service.cost ?? 0).toFixed(2)}</span>
+                              <Button variant="outline" size="sm" onClick={() => handleServiceClick(service)}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Details
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-10 text-center text-muted-foreground">No service history found.</div>
-                  )}
-                </div>
+                      )
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -243,11 +215,15 @@ export default function ServiceHistoryPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Vehicle</p>
-                    <p className="font-medium">{selectedService.vehicle}</p>
+                    <p className="font-medium">
+                      {vehicleMap[selectedService.vehicleId]
+                        ? `${vehicleMap[selectedService.vehicleId].make} ${vehicleMap[selectedService.vehicleId].model} (${vehicleMap[selectedService.vehicleId].year})`
+                        : "Unknown Vehicle"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Date</p>
-                    <p className="font-medium">{selectedService.date}</p>
+                    <p className="font-medium">{format(new Date(selectedService.serviceDate), "PPP")}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Mileage</p>
@@ -255,16 +231,16 @@ export default function ServiceHistoryPage() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Cost</p>
-                    <p className="font-medium">${selectedService.cost.toFixed(2)}</p>
+                    <p className="font-medium">${(selectedService.cost ?? 0).toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Technician</p>
-                    <p className="font-medium">{selectedService.technician}</p>
+                    <p className="font-medium">{selectedService.technicianId || "Not specified"}</p>
                   </div>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">Description</p>
-                  <p className="text-sm mt-1">{selectedService.description}</p>
+                  <p className="text-sm mt-1">{selectedService.description || "No description provided"}</p>
                 </div>
               </div>
             )}

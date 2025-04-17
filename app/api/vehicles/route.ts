@@ -2,7 +2,17 @@ import { ObjectId } from "mongodb"
 import { NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb/mongodb"
 import { getAuth } from "firebase-admin/auth"
+import { initializeApp, getApps, cert } from "firebase-admin/app"
 import type { Vehicle } from "@/lib/mongodb/models"
+
+// Initialize Firebase Admin SDK if it hasn't been initialized
+if (!getApps().length) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || "{}")
+
+  initializeApp({
+    credential: cert(serviceAccount),
+  })
+}
 
 interface CustomerDocument {
   _id: ObjectId
@@ -34,11 +44,7 @@ async function verifyAuthToken(req: NextRequest) {
 
     const token = authHeader.split("Bearer ")[1]
     const decodedToken = await getAuth().verifyIdToken(token)
-
-    // Get role from custom claims
-    const role = decodedToken.customClaims?.role || decodedToken.role || "client"
-    console.log("Auth verification:", { uid: decodedToken.uid, role, claims: decodedToken.customClaims })
-    return { ...decodedToken, role }
+    return decodedToken
   } catch (error) {
     console.error("Error verifying auth token:", error)
     return null

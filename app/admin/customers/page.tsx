@@ -18,9 +18,11 @@ import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useToast } from "@/hooks/use-toast"
 import { useCustomers, useDeleteCustomer } from "@/lib/api/hooks"
+import { CustomDialog } from "@/components/ui/CustomDialog"
 
 export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null)
   const { firebaseUser } = useAuth()
   const { toast } = useToast()
 
@@ -38,21 +40,7 @@ export default function CustomersPage() {
 
   const handleDeleteCustomer = async (id: string) => {
     if (!firebaseUser) return
-    
-    try {
-      await deleteCustomer.mutateAsync(id)
-      toast({
-        title: "Customer deleted",
-        description: "The customer has been deleted successfully.",
-      })
-    } catch (error) {
-      console.error("Error deleting customer:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete customer. Please try again.",
-        variant: "destructive",
-      })
-    }
+    setCustomerToDelete(id)
   }
 
   return (
@@ -133,7 +121,11 @@ export default function CustomersPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-red-600"
-                            onClick={() => handleDeleteCustomer(customer.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              document.body.click();
+                              setTimeout(() => handleDeleteCustomer(customer.id), 0);
+                            }}
                             disabled={deleteCustomer.isPending}
                           >
                             <Trash className="h-4 w-4 mr-2" />
@@ -149,6 +141,38 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      <CustomDialog
+        open={!!customerToDelete}
+        onClose={() => setCustomerToDelete(null)}
+        title="Are you sure?"
+        description="This action cannot be undone. This will permanently delete the customer and all associated vehicles and service records."
+      >
+        <button
+          style={{ background: "red", color: "white", marginRight: 8, padding: "8px 16px", borderRadius: 4, border: "none" }}
+          onClick={async () => {
+            setCustomerToDelete(null);
+            if (customerToDelete && firebaseUser) {
+              try {
+                await deleteCustomer.mutateAsync(customerToDelete);
+                toast({
+                  title: "Customer deleted",
+                  description: "The customer has been deleted successfully.",
+                });
+              } catch (error) {
+                console.error("Error deleting customer:", error);
+                toast({
+                  title: "Error",
+                  description: "Failed to delete customer. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }
+          }}
+        >
+          Delete
+        </button>
+      </CustomDialog>
     </AdminLayout>
   )
 } 

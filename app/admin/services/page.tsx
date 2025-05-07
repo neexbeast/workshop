@@ -24,10 +24,12 @@ import { format } from "date-fns"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useServices, useVehicles, useCustomers } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { CustomDialog } from "@/components/ui/CustomDialog"
 
 export default function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null)
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -104,7 +106,7 @@ export default function ServicesPage() {
 
   const handleDeleteService = async (id: string) => {
     if (!auth.firebaseUser) return
-    deleteMutation.mutate(id)
+    setServiceToDelete(id)
   }
 
   function renderServicesList() {
@@ -184,7 +186,11 @@ export default function ServicesPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleDeleteService(service.id)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              document.body.click();
+                              setTimeout(() => handleDeleteService(service.id), 0);
+                            }}
                             className="text-red-600"
                             disabled={deleteMutation.isPending}
                           >
@@ -280,6 +286,25 @@ export default function ServicesPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <CustomDialog
+        open={!!serviceToDelete}
+        onClose={() => setServiceToDelete(null)}
+        title="Are you sure?"
+        description="This action cannot be undone. This will permanently delete the service record."
+      >
+        <button
+          style={{ background: "red", color: "white", marginRight: 8, padding: "8px 16px", borderRadius: 4, border: "none" }}
+          onClick={() => {
+            setServiceToDelete(null);
+            if (serviceToDelete && auth.firebaseUser) {
+              deleteMutation.mutate(serviceToDelete);
+            }
+          }}
+        >
+          Delete
+        </button>
+      </CustomDialog>
     </AdminLayout>
   )
 } 

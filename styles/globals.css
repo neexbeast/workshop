@@ -1,0 +1,8 @@
+html, body, #__next, #root {
+  pointer-events: auto !important;
+}
+
+[data-radix-popper-content-wrapper],
+[data-radix-popper-content-wrapper] * {
+  pointer-events: auto !important;
+} 

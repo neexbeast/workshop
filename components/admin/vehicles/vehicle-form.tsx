@@ -41,11 +41,11 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
     vin: vehicle?.vin || "",
     make: vehicle?.make || "",
     model: vehicle?.model || "",
-    year: vehicle?.year || new Date().getFullYear(),
+    year: vehicle?.year || "",
     color: vehicle?.color || "",
     licensePlate: vehicle?.licensePlate || "",
     customerId: vehicle?.customerId || customerId || "",
-    mileage: vehicle?.mileage || 0,
+    mileage: vehicle?.mileage || "",
   })
   const [error, setError] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
@@ -87,7 +87,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: Number.parseInt(value) || 0 }))
+    setFormData((prev) => ({ ...prev, [name]: value === "" ? "" : Number(value) }))
   }
 
   const handleVINLookup = async () => {
@@ -101,12 +101,12 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
 
     try {
       const result = await decodeVIN(formData.vin)
-      if (result.success) {
+      if (result.success && result.data) {
         setFormData((prev) => ({
           ...prev,
-          make: result.data.make || prev.make,
-          model: result.data.model || prev.model,
-          year: result.data.year || prev.year,
+          make: result.data?.make || prev.make,
+          model: result.data?.model || prev.model,
+          year: result.data?.year || prev.year,
         }))
         toast({
           title: "VIN Lookup Successful",
@@ -129,14 +129,21 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
     setIsLoading(true)
 
     try {
+      // Convert string values to numbers for year and mileage
+      const submitData = {
+        ...formData,
+        year: formData.year === "" ? new Date().getFullYear() : Number(formData.year),
+        mileage: formData.mileage === "" ? 0 : Number(formData.mileage),
+      }
+
       if (isEdit && vehicle) {
-        await vehiclesApi.updateVehicle({ firebaseUser: auth.firebaseUser }, vehicle.id, formData)
+        await vehiclesApi.updateVehicle({ firebaseUser: auth.firebaseUser }, vehicle.id, submitData)
         toast({
           title: "Vehicle updated",
           description: "Vehicle information has been updated successfully.",
         })
       } else {
-        await vehiclesApi.createVehicle({ firebaseUser: auth.firebaseUser }, formData)
+        await vehiclesApi.createVehicle({ firebaseUser: auth.firebaseUser }, submitData)
         toast({
           title: "Vehicle added",
           description: "New vehicle has been added successfully.",

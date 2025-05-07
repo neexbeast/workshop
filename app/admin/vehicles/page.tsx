@@ -22,9 +22,12 @@ import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
 import { useVehicles, useCustomer } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { CustomDialog } from "@/components/ui/CustomDialog"
 
 export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null)
+  const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null)
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -67,7 +70,7 @@ export default function VehiclesPage() {
 
   const handleDeleteVehicle = async (id: string) => {
     if (!auth.firebaseUser) return
-    deleteMutation.mutate(id)
+    setVehicleToDelete(id)
   }
 
   // Function to determine if a vehicle needs service soon
@@ -131,7 +134,7 @@ export default function VehiclesPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
+                    <DropdownMenu open={dropdownOpenId === vehicle.id} onOpenChange={(open) => setDropdownOpenId(open ? vehicle.id : null)}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
@@ -155,7 +158,11 @@ export default function VehiclesPage() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600"
-                          onClick={() => handleDeleteVehicle(vehicle.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setDropdownOpenId(null);
+                            setTimeout(() => handleDeleteVehicle(vehicle.id), 0);
+                          }}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash className="h-4 w-4 mr-2" />
@@ -212,6 +219,25 @@ export default function VehiclesPage() {
 
         {renderVehiclesList()}
       </div>
+
+      <CustomDialog
+        open={!!vehicleToDelete}
+        onClose={() => setVehicleToDelete(null)}
+        title="Are you sure?"
+        description="This action cannot be undone. This will permanently delete the vehicle and all associated service records."
+      >
+        <button
+          style={{ background: "red", color: "white", marginRight: 8, padding: "8px 16px", borderRadius: 4, border: "none" }}
+          onClick={() => {
+            setVehicleToDelete(null);
+            if (vehicleToDelete && auth.firebaseUser) {
+              deleteMutation.mutate(vehicleToDelete);
+            }
+          }}
+        >
+          Delete
+        </button>
+      </CustomDialog>
     </AdminLayout>
   )
 }

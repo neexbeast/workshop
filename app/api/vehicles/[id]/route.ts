@@ -167,7 +167,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (decodedToken.role !== "admin") {
+    if (decodedToken.role !== "admin" && decodedToken.role !== "worker") {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
     }
 

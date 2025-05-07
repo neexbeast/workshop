@@ -23,6 +23,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import type { Service, Vehicle } from "@/lib/mongodb/models"
+import { useQueryClient } from "@tanstack/react-query"
 
 // Service types for dropdown
 const serviceTypes = [
@@ -67,6 +68,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
   const auth = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -184,11 +186,14 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
         })
       }
 
+      // Invalidate both services and vehicles query cache
+      queryClient.invalidateQueries({ queryKey: ["services"] })
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] })
+
       if (onSuccess) {
         onSuccess()
       } else {
         router.push("/admin/services")
-        router.refresh()
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred. Please try again.")

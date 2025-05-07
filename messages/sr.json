@@ -1,0 +1,40 @@
+{
+  "common": {
+    "welcome": "Dobrodošli",
+    "home": "Početna",
+    "about": "O nama",
+    "contact": "Kontakt"
+  },
+  "home": {
+    "title": "Dobrodošli na naš sajt",
+    "description": "Ovo je primer sajta sa podrškom za internacionalizaciju"
+  },
+  "dashboard": {
+    "title": "Kontrolna tabla",
+    "vehicles": {
+      "title": "Vaša vozila",
+      "noVehicles": "Nema pronađenih vozila",
+      "addVehicle": "Dodaj vozilo"
+    },
+    "services": {
+      "recent": "Nedavni servisi",
+      "upcoming": "Predstojeći servisi",
+      "noServices": "Nema pronađenih servisa",
+      "viewAll": "Pogledaj sve servise"
+    },
+    "reminders": {
+      "title": "Podsetnici",
+      "noReminders": "Nema podsetnika",
+      "viewAll": "Pogledaj sve podsetnike"
+    }
+  },
+  "navigation": {
+    "dashboard": "Kontrolna tabla",
+    "vehicles": "Vozila",
+    "services": "Servisi",
+    "reminders": "Podsetnici",
+    "settings": "Podešavanja",
+    "signOut": "Odjavi se",
+    "language": "Jezik"
+  }
+} 

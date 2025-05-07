@@ -7,17 +7,20 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X, Calendar } from "lucide-react"
+import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ModeToggle } from "@/components/mode-toggle"
 import { cn } from "@/lib/utils"
+import { useTranslations } from 'next-intl'
+import LanguageSwitcher from "@/components/LanguageSwitcher"
 
 interface ClientLayoutProps {
   children: React.ReactNode
 }
 
 export function ClientLayout({ children }: ClientLayoutProps) {
+  const t = useTranslations('navigation');
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -49,151 +52,131 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   }, [user, loading, router, mounted])
 
   const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push("/")
-    } catch (error) {
-      console.error("Sign out error:", error)
-    }
+    await signOut()
+    router.push("/login")
   }
 
-  const navigation = [
-    { name: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
-    { name: "Schedule Service", href: "/schedule", icon: Calendar },
-    { name: "My Vehicles", href: "/client/vehicles", icon: Car },
-    { name: "Service History", href: "/client/service-history", icon: FileText },
-    { name: "Reminders", href: "/client/reminders", icon: Bell },
-    { name: "Settings", href: "/client/settings", icon: Settings },
-  ]
-
-  // Don't render anything while loading or not mounted
   if (!mounted || loading) {
     return null
   }
 
-  // Don't render the layout if user is not authenticated or not authorized
-  if (!user || user.role !== "client") {
-    return null
-  }
+  const navItems = [
+    { href: "/client/dashboard", icon: LayoutDashboard, label: t('dashboard') },
+    { href: "/client/vehicles", icon: Car, label: t('vehicles') },
+    { href: "/client/services", icon: FileText, label: t('services') },
+    { href: "/client/reminders", icon: Bell, label: t('reminders') },
+    { href: "/client/settings", icon: Settings, label: t('settings') },
+  ]
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow border-r pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <span className="font-bold text-xl">My Workshop</span>
-          </div>
-          <div className="mt-5 flex-grow flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
-                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    <item.icon
-                      className={cn(
-                        "mr-3 flex-shrink-0 h-5 w-5",
-                        isActive ? "text-primary-foreground" : "text-muted-foreground",
-                      )}
-                    />
-                    {item.name}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-          <div className="flex-shrink-0 flex border-t p-4">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-              </Avatar>
-              <div className="ml-3">
-                <p className="text-sm font-medium">{user?.email}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile sidebar */}
+    <div className="flex min-h-screen">
+      {/* Mobile Navigation */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild className="md:hidden">
-          <Button variant="outline" size="icon" className="absolute left-4 top-4 z-40">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50">
+            <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
+        <SheetContent side="left" className="w-[300px] p-0">
           <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between px-4 h-16 border-b">
-              <span className="font-bold text-xl">My Workshop</span>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close menu</span>
-              </Button>
-            </div>
-            <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
-                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
-                    )}
-                    onClick={() => setOpen(false)}
-                  >
-                    <item.icon
-                      className={cn(
-                        "mr-3 flex-shrink-0 h-5 w-5",
-                        isActive ? "text-primary-foreground" : "text-muted-foreground",
-                      )}
-                    />
-                    {item.name}
-                  </Link>
-                )
-              })}
-            </nav>
-            <div className="flex-shrink-0 flex border-t p-4">
-              <div className="flex items-center">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center space-x-2">
+                <Avatar>
+                  <AvatarFallback>{user?.email?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{user?.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                <div>
+                  <p className="font-medium">{user?.email}</p>
+                  <p className="text-sm text-muted-foreground">Client</p>
                 </div>
               </div>
+            </div>
+            <nav className="flex-1 p-4 space-y-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium",
+                    pathname === item.href
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  )}
+                  onClick={() => setOpen(false)}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+            <div className="p-4 border-t space-y-2">
+              <div className="flex items-center gap-2">
+                <ModeToggle />
+                <LanguageSwitcher />
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                {t('signOut')}
+              </Button>
             </div>
           </div>
         </SheetContent>
       </Sheet>
 
-      {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-background border-b">
-          <div className="flex-1 flex justify-end px-4">
-            <div className="ml-4 flex items-center md:ml-6 space-x-2">
-              <ModeToggle />
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign out
-              </Button>
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="flex flex-col flex-grow border-r bg-background">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center space-x-2">
+              <Avatar>
+                <AvatarFallback>{user?.email?.[0].toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{user?.email}</p>
+                <p className="text-sm text-muted-foreground">Client</p>
+              </div>
             </div>
           </div>
+          <nav className="flex-1 p-4 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium",
+                  pathname === item.href
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+          <div className="p-4 border-t space-y-2">
+            <div className="flex items-center gap-2">
+              <ModeToggle />
+              <LanguageSwitcher />
+            </div>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={handleSignOut}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {t('signOut')}
+            </Button>
+          </div>
         </div>
+      </div>
 
-        <main className="flex-1 relative overflow-y-auto focus:outline-none p-4 md:p-6">{children}</main>
+      {/* Main Content */}
+      <div className="flex-1 md:pl-64">
+        <main className="p-6">{children}</main>
       </div>
     </div>
   )

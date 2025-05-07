@@ -120,7 +120,7 @@ export const useClientVehicles = (customerId?: string) => {
   return useQuery({
     queryKey: ["vehicles", "client", customerId],
     queryFn: () => vehiclesApi.getVehicles({ firebaseUser }, undefined, customerId),
-    enabled: !!firebaseUser && !!customerId,
+    enabled: !!firebaseUser && !!customerId
   })
 }
 

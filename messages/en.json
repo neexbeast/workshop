@@ -1,0 +1,40 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "home": {
+    "title": "Welcome to our website",
+    "description": "This is a sample website with internationalization support"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "vehicles": {
+      "title": "Your Vehicles",
+      "noVehicles": "No vehicles found",
+      "addVehicle": "Add Vehicle"
+    },
+    "services": {
+      "recent": "Recent Services",
+      "upcoming": "Upcoming Services",
+      "noServices": "No services found",
+      "viewAll": "View All Services"
+    },
+    "reminders": {
+      "title": "Reminders",
+      "noReminders": "No reminders",
+      "viewAll": "View All Reminders"
+    }
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "vehicles": "Vehicles",
+    "services": "Services",
+    "reminders": "Reminders",
+    "settings": "Settings",
+    "signOut": "Sign Out",
+    "language": "Language"
+  }
+} 

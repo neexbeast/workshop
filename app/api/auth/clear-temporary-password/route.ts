@@ -11,9 +11,13 @@ export async function POST(req: NextRequest) {
     const token = authHeader.split("Bearer ")[1]
     const decodedToken = await getAuth().verifyIdToken(token)
     
-    // Update custom claims to remove temporaryPassword flag
+    // Get existing custom claims
+    const user = await getAuth().getUser(decodedToken.uid)
+    const existingClaims = user.customClaims || {}
+    
+    // Update custom claims to remove temporaryPassword flag while preserving other claims
     await getAuth().setCustomUserClaims(decodedToken.uid, {
-      role: decodedToken.claims.role,
+      ...existingClaims,
       temporaryPassword: false
     })
 

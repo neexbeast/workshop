@@ -21,7 +21,9 @@ interface CustomerFormProps {
   isEdit?: boolean
 }
 
-type CustomerFormData = Pick<Customer, "name" | "email" | "phone" | "address">
+type CustomerFormData = Pick<Customer, "name" | "phone" | "address"> & {
+  email?: string;
+}
 
 export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
   const router = useRouter()
@@ -106,13 +108,13 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email (Optional)</Label>
             <Input
               id="email"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
+              pattern={formData.email ? "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" : undefined}
             />
           </div>
           <div className="space-y-2">

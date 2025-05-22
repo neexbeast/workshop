@@ -54,77 +54,82 @@ export async function POST(req: NextRequest) {
     console.log("Received customer data:", { name, email, phone, address })
 
     // Validate required fields
-    if (!name || !email) {
-      return NextResponse.json({ error: "Name and email are required" }, { status: 400 })
+    if (!name) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 })
     }
 
-    // Check if customer with this email already exists
+    // Check if customer with this email already exists (only if email is provided)
     const { db } = await connectToDatabase()
-    const existingCustomer = await db.collection("customers").findOne({ email })
-    console.log("Existing customer check:", existingCustomer ? "Found" : "Not found")
+    if (email) {
+      const existingCustomer = await db.collection("customers").findOne({ email })
+      console.log("Existing customer check:", existingCustomer ? "Found" : "Not found")
 
-    if (existingCustomer) {
-      return NextResponse.json({ error: "Customer with this email already exists" }, { status: 409 })
+      if (existingCustomer) {
+        return NextResponse.json({ error: "Customer with this email already exists" }, { status: 409 })
+      }
     }
 
     let createdUserId: string | undefined
 
     try {
-      // Generate a temporary password
-      const temporaryPassword = generatePassword()
-      console.log("Generated temporary password")
+      // Only create Firebase user if email is provided
+      if (email) {
+        // Generate a temporary password
+        const temporaryPassword = generatePassword()
+        console.log("Generated temporary password")
 
-      // Create Firebase user
-      console.log("Creating Firebase user...")
-      const userRecord = await getAuth().createUser({
-        email: email,
-        password: temporaryPassword,
-        displayName: name,
-        emailVerified: false,
-      })
-      console.log("Firebase user created:", userRecord.uid)
+        // Create Firebase user
+        console.log("Creating Firebase user...")
+        const userRecord = await getAuth().createUser({
+          email: email,
+          password: temporaryPassword,
+          displayName: name,
+          emailVerified: false,
+        })
+        console.log("Firebase user created:", userRecord.uid)
 
-      createdUserId = userRecord.uid
+        createdUserId = userRecord.uid
 
-      // Set custom claims for client role
-      console.log("Setting custom claims...")
-      await getAuth().setCustomUserClaims(userRecord.uid, { 
-        role: "client",
-        temporaryPassword: true 
-      })
-      console.log("Custom claims set successfully")
+        // Set custom claims for client role
+        console.log("Setting custom claims...")
+        await getAuth().setCustomUserClaims(userRecord.uid, { 
+          role: "client",
+          temporaryPassword: true 
+        })
+        console.log("Custom claims set successfully")
 
-      // Send welcome email with temporary password
-      console.log("Sending welcome email...")
-      const { sendMail } = await import("@/lib/email/send-mail")
-      await sendMail({
-        to: email,
-        subject: "Welcome to Workshop - Your Temporary Password",
-        html: `
-          <h1>Welcome to Workshop!</h1>
-          <p>Hello ${name},</p>
-          <p>Your account has been created successfully. Here are your login credentials:</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
-          <p>Please log in using these credentials and change your password immediately for security purposes.</p>
-          <p>You can log in at: <a href="${process.env.NEXT_PUBLIC_PASSWORD_RESET_URL?.replace('/reset-password', '/login') || 'http://localhost:3000/login'}">${process.env.NEXT_PUBLIC_PASSWORD_RESET_URL?.replace('/reset-password', '/login') || 'http://localhost:3000/login'}</a></p>
-          <p>If you did not request this account, please ignore this email.</p>
-          <br>
-          <p>Best regards,</p>
-          <p>Workshop Team</p>
-        `,
-      })
-      console.log("Welcome email sent")
+        // Send welcome email with temporary password
+        console.log("Sending welcome email...")
+        const { sendMail } = await import("@/lib/email/send-mail")
+        await sendMail({
+          to: email,
+          subject: "Welcome to Workshop - Your Temporary Password",
+          html: `
+            <h1>Welcome to Workshop!</h1>
+            <p>Hello ${name},</p>
+            <p>Your account has been created successfully. Here are your login credentials:</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
+            <p>Please log in using these credentials and change your password immediately for security purposes.</p>
+            <p>You can log in at: <a href="${process.env.NEXT_PUBLIC_PASSWORD_RESET_URL?.replace('/reset-password', '/login') || 'http://localhost:3000/login'}">${process.env.NEXT_PUBLIC_PASSWORD_RESET_URL?.replace('/reset-password', '/login') || 'http://localhost:3000/login'}</a></p>
+            <p>If you did not request this account, please ignore this email.</p>
+            <br>
+            <p>Best regards,</p>
+            <p>Workshop Team</p>
+          `,
+        })
+        console.log("Welcome email sent")
+      }
 
       // Create the customer record
       console.log("Creating customer record in database...")
       const now = new Date()
       const newCustomer = {
         name,
-        email,
+        email: email || "",
         phone: phone || "",
         address: address || "",
-        userId: userRecord.uid,
+        userId: createdUserId || "",
         createdAt: now,
         updatedAt: now,
       }
@@ -138,7 +143,7 @@ export async function POST(req: NextRequest) {
             id: result.insertedId,
             ...newCustomer,
           },
-          message: "Customer created successfully. Password reset email sent.",
+          message: email ? "Customer created successfully. Password reset email sent." : "Customer created successfully.",
         },
         { status: 201 }
       )

@@ -8,7 +8,7 @@ export interface User {
 export interface Customer {
   id: string
   name: string
-  email: string
+  email?: string
   phone: string
   address?: string
   userId: string // Reference to the admin/worker who created this customer

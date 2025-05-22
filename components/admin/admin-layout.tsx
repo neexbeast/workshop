@@ -84,7 +84,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow border-r pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="font-bold text-xl">Workshop Admin</span>
+            <span className="font-bold text-xl">M Auto Admin</span>
           </div>
           <div className="mt-5 flex-grow flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
@@ -136,7 +136,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between px-4 h-16 border-b">
-              <span className="font-bold text-xl">Workshop Admin</span>
+              <span className="font-bold text-xl">M Auto Admin</span>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
                 <span className="sr-only">Close menu</span>

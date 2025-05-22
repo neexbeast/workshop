@@ -6,7 +6,7 @@ import { ClientLayout } from "@/components/client/client-layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Search, Edit, Wrench, Loader2 } from "lucide-react"
+import { Search, Edit, Wrench, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useClientVehicles } from "@/lib/api/hooks"
 
@@ -39,13 +39,7 @@ export default function ClientVehiclesPage() {
     if (vehicles.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No vehicles found. Add your first vehicle to get started.</p>
-          <Button asChild className="mt-4">
-            <Link href="/client/vehicles/add">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Vehicle
-            </Link>
-          </Button>
+          <p className="text-muted-foreground">No vehicles found. Please contact an administrator to add a vehicle.</p>
         </div>
       )
     }
@@ -101,12 +95,6 @@ export default function ClientVehiclesPage() {
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">My Vehicles</h1>
-          <Button asChild>
-            <Link href="/client/vehicles/add">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Vehicle
-            </Link>
-          </Button>
         </div>
 
         <div className="flex items-center space-x-2">

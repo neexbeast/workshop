@@ -92,7 +92,7 @@ export default function ServiceHistoryPage() {
                   </TableCell>
                   <TableCell>{service.serviceType}</TableCell>
                   <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                  <TableCell>{service.cost.toLocaleString()} €</TableCell>
+                  <TableCell>{service.cost.toLocaleString()} KM</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setSelectedService(service)}>
                       Detalji
@@ -132,7 +132,7 @@ export default function ServiceHistoryPage() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Cena</p>
-                    <p className="font-medium">{selectedService.cost.toLocaleString()} €</p>
+                    <p className="font-medium">{selectedService.cost.toLocaleString()} KM</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Mehaničar</p>

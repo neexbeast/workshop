@@ -169,7 +169,7 @@ export default function AdminDashboard() {
               <Euro className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.monthlyRevenue.toLocaleString()} €</div>
+              <div className="text-2xl font-bold">{stats.monthlyRevenue.toLocaleString()} KM</div>
             </CardContent>
           </Card>
         </div>
@@ -201,7 +201,7 @@ export default function AdminDashboard() {
                           {vehicle ? `${vehicle.make} ${vehicle.model}` : "Unknown Vehicle"}
                         </p>
                       </div>
-                      <div className="ml-auto font-medium">{service.cost.toLocaleString()} €</div>
+                      <div className="ml-auto font-medium">{service.cost.toLocaleString()} KM</div>
                     </div>
                   )
                 })}

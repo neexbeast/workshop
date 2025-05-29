@@ -79,6 +79,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       icon: Wrench,
     },
     {
+      name: "Raspored",
+      href: "/admin/schedule",
+      icon: Calendar,
+    },
+    {
       name: "Podsetnici",
       href: "/admin/reminders",
       icon: Bell,

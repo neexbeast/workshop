@@ -65,8 +65,8 @@ export default function RemindersPage() {
       <div className="flex flex-col space-y-6">
         <div className="flex justify-between items-center">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Reminders</h1>
-            <p className="text-muted-foreground">Manage service reminders</p>
+            <h1 className="text-3xl font-bold tracking-tight">Podsetnici</h1>
+            <p className="text-muted-foreground">Upravljajte podsetnicima za servis</p>
           </div>
         </div>
 
@@ -75,7 +75,7 @@ export default function RemindersPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search reminders..."
+              placeholder="Pretraži podsetnike..."
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -84,39 +84,39 @@ export default function RemindersPage() {
           <Select value={dateFilter} onValueChange={(value: "all" | "today" | "week" | "month" | "year") => setDateFilter(value)}>
             <SelectTrigger className="w-full md:w-[200px]">
               <CalendarRange className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by date" />
+              <SelectValue placeholder="Filtriraj po datumu" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Reminders</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="all">Svi Podsetnici</SelectItem>
+              <SelectItem value="today">Danas</SelectItem>
+              <SelectItem value="week">Ove Nedelje</SelectItem>
+              <SelectItem value="month">Ovog Meseca</SelectItem>
+              <SelectItem value="year">Ove Godine</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {error ? (
-          <div className="text-center text-red-500">{error instanceof Error ? error.message : "Failed to fetch reminders"}</div>
+          <div className="text-center text-red-500">{error instanceof Error ? error.message : "Neuspešno učitavanje podsetnika"}</div>
         ) : isLoading ? (
-          <div className="text-center">Loading reminders...</div>
+          <div className="text-center">Učitavanje podsetnika...</div>
         ) : (
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Datum</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Message</TableHead>
+                  <TableHead>Poruka</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right">Akcije</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReminders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center">
-                      No reminders found
+                      Nema pronađenih podsetnika
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -132,7 +132,7 @@ export default function RemindersPage() {
                       <TableCell>{reminder.message}</TableCell>
                       <TableCell>
                         <Badge variant={reminder.sent ? "default" : "secondary"}>
-                          {reminder.sent ? "Sent" : "Pending"}
+                          {reminder.sent ? "Poslato" : "Na čekanju"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">

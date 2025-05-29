@@ -168,7 +168,7 @@ export default function ServicesPage() {
                     <TableCell>{vehicle?.licensePlate || "-"}</TableCell>
                     <TableCell>{service.serviceType}</TableCell>
                     <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                    <TableCell>{service.cost.toLocaleString()} €</TableCell>
+                    <TableCell>{service.cost.toLocaleString()} KM</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -290,7 +290,7 @@ export default function ServicesPage() {
                         <TableCell>{vehicle?.licensePlate || "-"}</TableCell>
                         <TableCell>{service.serviceType}</TableCell>
                         <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                        <TableCell>{service.cost.toLocaleString()} €</TableCell>
+                        <TableCell>{service.cost.toLocaleString()} KM</TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -371,7 +371,7 @@ export default function ServicesPage() {
             <p><b>Datum:</b> {format(new Date(serviceDetails.service.serviceDate), "dd.MM.yyyy")}</p>
             <p><b>Tip Servisa:</b> {serviceDetails.service.serviceType}</p>
             <p><b>Kilometraža:</b> {serviceDetails.service.mileage.toLocaleString()} km</p>
-            <p><b>Cena:</b> {serviceDetails.service.cost.toLocaleString()} €</p>
+            <p><b>Cena:</b> {serviceDetails.service.cost.toLocaleString()} KM</p>
             <p><b>Opis:</b> {serviceDetails.service.description || '-'}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               

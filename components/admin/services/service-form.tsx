@@ -327,7 +327,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cost">Cena Servisa (€)</Label>
+            <Label htmlFor="cost">Cena Servisa (KM)</Label>
             <Input
               id="cost"
               name="cost"

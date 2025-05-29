@@ -138,8 +138,8 @@ export default function AdminSchedulePage() {
     <AdminLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Schedule Management</h1>
-          <p className="text-muted-foreground">Manage your shop&apos;s availability and view appointments</p>
+          <h1 className="text-3xl font-bold tracking-tight">Raspored</h1>
+          <p className="text-muted-foreground">Upravljajte dostupnošću servisa i pregledajte zakazane termine</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -147,8 +147,8 @@ export default function AdminSchedulePage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Select Date</CardTitle>
-                <CardDescription>Choose a date to manage availability</CardDescription>
+                <CardTitle>Izaberite Datum</CardTitle>
+                <CardDescription>Izaberite datum za upravljanje dostupnošću</CardDescription>
               </CardHeader>
               <CardContent>
                 <Calendar
@@ -164,8 +164,8 @@ export default function AdminSchedulePage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="space-y-1">
-                  <CardTitle>Working Hours</CardTitle>
-                  <CardDescription>Set your working hours for this date</CardDescription>
+                  <CardTitle>Radno Vreme</CardTitle>
+                  <CardDescription>Podesite radno vreme za ovaj datum</CardDescription>
                 </div>
                 <Button
                   variant="outline"
@@ -175,7 +175,7 @@ export default function AdminSchedulePage() {
                     setIsEditingHours(true)
                   }}
                 >
-                  Edit Hours
+                  Izmeni Vreme
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -185,16 +185,16 @@ export default function AdminSchedulePage() {
                     onCheckedChange={(checked) => handleSaveAvailability(checked, workingHours, timeSlots)}
                     disabled={isLoadingAvailability}
                   />
-                  <Label>Block entire day</Label>
+                  <Label>Blokiraj ceo dan</Label>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Start Time</Label>
+                    <Label>Početak</Label>
                     <p className="text-sm">{workingHours.start}</p>
                   </div>
                   <div>
-                    <Label>End Time</Label>
+                    <Label>Kraj</Label>
                     <p className="text-sm">{workingHours.end}</p>
                   </div>
                 </div>
@@ -212,8 +212,8 @@ export default function AdminSchedulePage() {
             {/* Scheduled Appointments Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Scheduled Appointments</CardTitle>
-                <CardDescription>View appointments for {format(selectedDate, "MMMM d, yyyy")}</CardDescription>
+                <CardTitle>Zakazani Termini</CardTitle>
+                <CardDescription>Pregled termina za {format(selectedDate, "d. MMMM yyyy")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingSchedules ? (
@@ -222,7 +222,7 @@ export default function AdminSchedulePage() {
                   </div>
                 ) : schedules.length === 0 ? (
                   <p className="text-center py-4 text-muted-foreground">
-                    No appointments scheduled for this date.
+                    Nema zakazanih termina za ovaj datum.
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -258,8 +258,8 @@ export default function AdminSchedulePage() {
             {/* Time Slots Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Time Slots</CardTitle>
-                <CardDescription>Manage availability for each time slot</CardDescription>
+                <CardTitle>Vremenski Slotovi</CardTitle>
+                <CardDescription>Upravljajte dostupnošću za svaki vremenski slot</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingAvailability ? (
@@ -287,10 +287,10 @@ export default function AdminSchedulePage() {
                       {isLoadingAvailability ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
+                          Čuvanje...
                         </>
                       ) : (
-                        "Save Availability"
+                        "Sačuvaj Dostupnost"
                       )}
                     </Button>
                   </div>
@@ -304,15 +304,15 @@ export default function AdminSchedulePage() {
         <Dialog open={isEditingHours} onOpenChange={setIsEditingHours}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Working Hours</DialogTitle>
+              <DialogTitle>Izmeni Radno Vreme</DialogTitle>
               <DialogDescription>
-                Set the working hours and interval for this date
+                Podesite radno vreme i interval za ovaj datum
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time</Label>
+                  <Label htmlFor="startTime">Početak</Label>
                   <Input
                     id="startTime"
                     type="time"
@@ -323,7 +323,7 @@ export default function AdminSchedulePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time</Label>
+                  <Label htmlFor="endTime">Kraj</Label>
                   <Input
                     id="endTime"
                     type="time"
@@ -335,7 +335,7 @@ export default function AdminSchedulePage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="interval">Interval (minutes)</Label>
+                <Label htmlFor="interval">Interval (minuta)</Label>
                 <Select
                   value={editingWorkingHours.interval.toString()}
                   onValueChange={(value) =>
@@ -343,19 +343,19 @@ export default function AdminSchedulePage() {
                   }
                 >
                   <SelectTrigger id="interval">
-                    <SelectValue placeholder="Select interval" />
+                    <SelectValue placeholder="Izaberite interval" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
+                    <SelectItem value="15">15 minuta</SelectItem>
+                    <SelectItem value="30">30 minuta</SelectItem>
+                    <SelectItem value="45">45 minuta</SelectItem>
+                    <SelectItem value="60">60 minuta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={handleSaveWorkingHours}>Save Changes</Button>
+              <Button onClick={handleSaveWorkingHours}>Sačuvaj Promene</Button>
             </div>
           </DialogContent>
         </Dialog>

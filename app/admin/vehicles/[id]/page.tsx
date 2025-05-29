@@ -25,7 +25,7 @@ export default function EditVehiclePage() {
         setVehicle(response.vehicle)
       } catch (error) {
         console.error("Error fetching vehicle:", error)
-        setError(error instanceof Error ? error.message : "Failed to fetch vehicle")
+        setError(error instanceof Error ? error.message : "Neuspešno učitavanje vozila")
       } finally {
         setIsLoading(false)
       }
@@ -48,7 +48,7 @@ export default function EditVehiclePage() {
     return (
       <AdminLayout>
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">Error</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-6">Greška</h1>
           <p className="text-red-500">{error}</p>
         </div>
       </AdminLayout>
@@ -59,8 +59,8 @@ export default function EditVehiclePage() {
     return (
       <AdminLayout>
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">Vehicle Not Found</h1>
-          <p>The requested vehicle could not be found.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-6">Vozilo nije pronađeno</h1>
+          <p>Traženo vozilo nije moglo biti pronađeno.</p>
         </div>
       </AdminLayout>
     )
@@ -69,7 +69,7 @@ export default function EditVehiclePage() {
   return (
     <AdminLayout>
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight mb-6">Edit Vehicle</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-6">Izmeni Vozilo</h1>
         <VehicleForm vehicle={vehicle} isEdit={true} />
       </div>
     </AdminLayout>

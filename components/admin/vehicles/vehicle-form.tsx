@@ -67,7 +67,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         setCustomers(response.customers || [])
       } catch (err) {
         console.error("Error fetching customers:", err)
-        setError(err instanceof Error ? err.message : "Failed to fetch customers")
+        setError(err instanceof Error ? err.message : "Neuspešno učitavanje kupaca")
       } finally {
         setIsLoadingCustomers(false)
       }
@@ -92,7 +92,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
 
   const handleVINLookup = async () => {
     if (!validateVIN(formData.vin)) {
-      setError("Invalid VIN format. Please check and try again.")
+      setError("Neispravni VIN format. Molimo proverite i pokušajte ponovo.")
       return
     }
 
@@ -109,14 +109,14 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
           year: result.data?.year || prev.year,
         }))
         toast({
-          title: "VIN Lookup Successful",
-          description: "Vehicle information has been populated from the VIN.",
+          title: "VIN pretraga uspešna",
+          description: "Informacije o vozilu su popunjene na osnovu VIN-a.",
         })
       } else {
-        setError(result.error || "Failed to decode VIN. Please enter details manually.")
+        setError(result.error || "Neuspešno dekodiranje VIN-a. Molimo unesite podatke ručno.")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      setError(err instanceof Error ? err.message : "Došlo je do greške. Molimo pokušajte ponovo.")
       console.error(err)
     } finally {
       setIsLookingUpVIN(false)
@@ -139,14 +139,14 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
       if (isEdit && vehicle) {
         await vehiclesApi.updateVehicle({ firebaseUser: auth.firebaseUser }, vehicle.id, submitData)
         toast({
-          title: "Vehicle updated",
-          description: "Vehicle information has been updated successfully.",
+          title: "Vozilo ažurirano",
+          description: "Informacije o vozilu su uspešno ažurirane.",
         })
       } else {
         await vehiclesApi.createVehicle({ firebaseUser: auth.firebaseUser }, submitData)
         toast({
-          title: "Vehicle added",
-          description: "New vehicle has been added successfully.",
+          title: "Vozilo dodato",
+          description: "Novo vozilo je uspešno dodato.",
         })
       }
 
@@ -159,7 +159,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         router.push("/admin/vehicles")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred. Please try again.")
+      setError(err instanceof Error ? err.message : "Došlo je do greške. Molimo pokušajte ponovo.")
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -169,11 +169,11 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEdit ? "Edit Vehicle" : "Add New Vehicle"}</CardTitle>
+        <CardTitle>{isEdit ? "Izmeni Vozilo" : "Dodaj Novo Vozilo"}</CardTitle>
         <CardDescription>
           {isEdit
-            ? "Update vehicle information in your database."
-            : "Enter vehicle details to add it to your database."}
+            ? "Ažurirajte informacije o vozilu u vašoj bazi podataka."
+            : "Unesite podatke o vozilu da ga dodate u vašu bazu podataka."}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -184,7 +184,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="vin">VIN (Vehicle Identification Number)</Label>
+            <Label htmlFor="vin">VIN (Identifikacioni broj vozila)</Label>
             <div className="flex space-x-2">
               <Input
                 id="vin"
@@ -202,7 +202,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
                   ) : (
                     <>
                       <Search className="h-4 w-4 mr-2" />
-                      Lookup
+                      Pretraži
                     </>
                   )}
                 </Button>
@@ -211,7 +211,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="make">Make</Label>
+              <Label htmlFor="make">Marka</Label>
               <Input id="make" name="make" value={formData.make} onChange={handleChange} required />
             </div>
             <div className="space-y-2">
@@ -221,7 +221,7 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="year">Year</Label>
+              <Label htmlFor="year">Godina</Label>
               <Input
                 id="year"
                 name="year"
@@ -234,17 +234,17 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="color">Color</Label>
+              <Label htmlFor="color">Boja</Label>
               <Input id="color" name="color" value={formData.color} onChange={handleChange} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="licensePlate">License Plate</Label>
+              <Label htmlFor="licensePlate">Registarske tablice</Label>
               <Input id="licensePlate" name="licensePlate" value={formData.licensePlate} onChange={handleChange} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mileage">Current Mileage (km)</Label>
+              <Label htmlFor="mileage">Trenutna kilometraža (km)</Label>
               <Input
                 id="mileage"
                 name="mileage"
@@ -257,20 +257,20 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="customerId">Owner</Label>
+            <Label htmlFor="customerId">Vlasnik</Label>
             <Select
               value={formData.customerId}
               onValueChange={(value) => handleSelectChange("customerId", value)}
               disabled={isLoadingCustomers || !!customerId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a customer" />
+                <SelectValue placeholder="Izaberite kupca" />
               </SelectTrigger>
               <SelectContent>
                 {isLoadingCustomers ? (
                   <div className="flex items-center justify-center p-2">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading customers...
+                    Učitavanje kupaca...
                   </div>
                 ) : (
                   customers.map((customer) => (
@@ -285,18 +285,18 @@ export function VehicleForm({ vehicle, customerId, onSuccess, isEdit = false }: 
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
-            Cancel
+            Otkaži
           </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isEdit ? "Updating..." : "Adding..."}
+                {isEdit ? "Ažuriranje..." : "Dodavanje..."}
               </>
             ) : isEdit ? (
-              "Update Vehicle"
+              "Ažuriraj Vozilo"
             ) : (
-              "Add Vehicle"
+              "Dodaj Vozilo"
             )}
           </Button>
         </CardFooter>

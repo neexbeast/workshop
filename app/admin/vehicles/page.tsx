@@ -212,18 +212,6 @@ export default function VehiclesPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Sortiraj po" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="make">Marka</SelectItem>
-              <SelectItem value="model">Model</SelectItem>
-              <SelectItem value="year">Godina</SelectItem>
-              <SelectItem value="mileage">Kilometraža</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <Card>

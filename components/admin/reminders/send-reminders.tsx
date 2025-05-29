@@ -60,23 +60,23 @@ export function SendReminders() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Send Service Reminders</CardTitle>
-        <CardDescription>Send email reminders to customers for upcoming services that are due.</CardDescription>
+        <CardTitle>Pošalji Podsetnike za Servis</CardTitle>
+        <CardDescription>Pošaljite email podsetnike klijentima za predstojeće servise koji su na redu.</CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">
-          This will send email notifications to all customers who have service reminders due today. Reminders are
-          automatically marked as sent after successful delivery.
+          Ovo će poslati email obaveštenja svim klijentima koji imaju podsetnike za servis koji su danas na redu. Podsetnici se
+          automatski označavaju kao poslati nakon uspešnog slanja.
         </p>
 
         {result && (
           <Alert variant={result.success ? "default" : "destructive"} className="mb-4">
             {result.success ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            <AlertTitle>{result.success ? "Success" : "Error"}</AlertTitle>
+            <AlertTitle>{result.success ? "Uspeh" : "Greška"}</AlertTitle>
             <AlertDescription>
               {result.message}
               {result.success && result.count === 0 && (
-                <p className="mt-2">There are no reminders due for sending at this time.</p>
+                <p className="mt-2">Trenutno nema podsetnika za slanje.</p>
               )}
             </AlertDescription>
           </Alert>
@@ -87,12 +87,12 @@ export function SendReminders() {
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending Reminders...
+              Slanje Podsetnika...
             </>
           ) : (
             <>
               <Mail className="mr-2 h-4 w-4" />
-              Send Reminders
+              Pošalji Podsetnike
             </>
           )}
         </Button>

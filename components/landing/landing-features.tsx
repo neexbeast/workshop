@@ -4,33 +4,33 @@ export function LandingFeatures() {
   const features = [
     {
       icon: <Car className="h-10 w-10" />,
-      title: "Vehicle Management",
-      description: "Track all vehicle details including VIN, make, model, and service history.",
+      title: "Upravljanje Vozilima",
+      description: "Pratite sve detalje vozila uključujući VIN, marku, model i istoriju servisa.",
     },
     {
       icon: <Users className="h-10 w-10" />,
-      title: "Customer Database",
-      description: "Maintain a comprehensive database of all your customers and their vehicles.",
+      title: "Baza Klijenata",
+      description: "Održavajte sveobuhvatnu bazu svih vaših klijenata i njihovih vozila.",
     },
     {
       icon: <Calendar className="h-10 w-10" />,
-      title: "Service Tracking",
-      description: "Record all services performed, including parts, labor, and mileage.",
+      title: "Praćenje Servisa",
+      description: "Beležite sve izvršene servise, uključujući delove, rad i kilometražu.",
     },
     {
       icon: <Bell className="h-10 w-10" />,
-      title: "Service Reminders",
-      description: "Automated email reminders for upcoming services based on time or mileage.",
+      title: "Podsetnici za Servis",
+      description: "Automatska email obaveštenja za predstojeće servise na osnovu vremena ili kilometraže.",
     },
     {
       icon: <BarChart className="h-10 w-10" />,
-      title: "Business Analytics",
-      description: "Gain insights into your workshop's performance with detailed reports.",
+      title: "Poslovna Analitika",
+      description: "Dobijte uvid u performanse vašeg servisa kroz detaljne izveštaje.",
     },
     {
       icon: <Shield className="h-10 w-10" />,
-      title: "Secure Access",
-      description: "Role-based access control for administrators, workers, and clients.",
+      title: "Siguran Pristup",
+      description: "Kontrola pristupa zasnovana na ulogama za administratore, radnike i klijente.",
     },
   ]
 
@@ -40,10 +40,10 @@ export function LandingFeatures() {
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              Everything You Need to Manage Your Workshop
+              Sve Što Vam Je Potrebno za Upravljanje Vašim Servisom
             </h2>
             <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-              Our comprehensive solution provides all the tools you need to run your workshop efficiently.
+              Naše sveobuhvatno rešenje pruža sve alate koji su vam potrebni za efikasno vođenje servisa.
             </p>
           </div>
         </div>

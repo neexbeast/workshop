@@ -84,11 +84,11 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEdit ? "Edit Customer" : "Add New Customer"}</CardTitle>
+        <CardTitle>{isEdit ? "Izmeni Klijenta" : "Dodaj Novog Klijenta"}</CardTitle>
         <CardDescription>
           {isEdit
-            ? "Update customer information in your database."
-            : "Enter customer details to add them to your database."}
+            ? "Ažurirajte informacije o klijentu u vašoj bazi podataka."
+            : "Unesite podatke o klijentu da biste ga dodali u vašu bazu podataka."}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -99,7 +99,7 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Ime</Label>
             <Input
               id="name"
               value={formData.name}
@@ -108,7 +108,7 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email (Optional)</Label>
+            <Label htmlFor="email">Email (Opciono)</Label>
             <Input
               id="email"
               type="email"
@@ -118,7 +118,7 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">Telefon</Label>
             <Input
               id="phone"
               type="tel"
@@ -128,7 +128,7 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">Adresa</Label>
             <Textarea
               id="address"
               value={formData.address}
@@ -139,18 +139,18 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
         </CardContent>
         <CardFooter className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
-            Cancel
+            Otkaži
           </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isEdit ? "Updating..." : "Adding..."}
+                {isEdit ? "Ažuriranje..." : "Dodavanje..."}
               </>
             ) : isEdit ? (
-              "Update Customer"
+              "Ažuriraj Klijenta"
             ) : (
-              "Add Customer"
+              "Dodaj Klijenta"
             )}
           </Button>
         </CardFooter>

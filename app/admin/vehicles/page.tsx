@@ -14,20 +14,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft, Loader2, FileText } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { vehiclesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
-import { useVehicles, useCustomer } from "@/lib/api/hooks"
+import { useVehicles, useCustomer, useCustomers } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CustomDialog } from "@/components/ui/CustomDialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
+import { Filter } from "lucide-react"
 
 export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null)
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState("make")
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -37,6 +47,7 @@ export default function VehiclesPage() {
   // Fetch data using React Query
   const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles(undefined, customerId)
   const { data: customerData } = useCustomer(customerId || "")
+  const { data: customersData } = useCustomers()
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -60,6 +71,10 @@ export default function VehiclesPage() {
 
   const vehicles = vehiclesData?.vehicles || []
   const customer = customerData?.customer
+  const customersMap = customersData?.customers?.reduce((acc, customer) => {
+    acc[customer.id] = customer
+    return acc
+  }, {} as { [key: string]: { name: string } }) || {}
 
   const filteredVehicles = vehicles.filter(
     (vehicle) =>
@@ -99,60 +114,53 @@ export default function VehiclesPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Marka</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Godina</TableHead>
               <TableHead>VIN</TableHead>
-              <TableHead>Make & Model</TableHead>
-              <TableHead>Year</TableHead>
-              <TableHead>License Plate</TableHead>
-              <TableHead>Mileage</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Tablice</TableHead>
+              <TableHead>Kilometraža</TableHead>
+              <TableHead>Vlasnik</TableHead>
+              <TableHead className="text-right">Akcije</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredVehicles.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center">
-                  No vehicles found
+                  Nema pronađenih vozila
                 </TableCell>
               </TableRow>
             ) : (
               filteredVehicles.map((vehicle) => (
                 <TableRow key={vehicle.id}>
-                  <TableCell>{vehicle.vin}</TableCell>
-                  <TableCell>
-                    {vehicle.make} {vehicle.model}
-                  </TableCell>
+                  <TableCell>{vehicle.make}</TableCell>
+                  <TableCell>{vehicle.model}</TableCell>
                   <TableCell>{vehicle.year}</TableCell>
-                  <TableCell>{vehicle.licensePlate || "N/A"}</TableCell>
+                  <TableCell>{vehicle.vin}</TableCell>
+                  <TableCell>{vehicle.licensePlate}</TableCell>
                   <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
-                  <TableCell>
-                    {needsServiceSoon(vehicle.lastService, vehicle.mileage) && (
-                      <Badge variant="destructive">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        Service Due
-                      </Badge>
-                    )}
-                  </TableCell>
+                  <TableCell>{customersMap[vehicle.customerId]?.name || "-"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu open={dropdownOpenId === vehicle.id} onOpenChange={(open) => setDropdownOpenId(open ? vehicle.id : null)}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
+                          <span className="sr-only">Otvori meni</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuLabel>Akcije</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/vehicles/${vehicle.id}`}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            Izmeni
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/admin/services/add?vehicleId=${vehicle.id}`}>
                             <Wrench className="h-4 w-4 mr-2" />
-                            Add Service
+                            Dodaj Servis
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -166,7 +174,7 @@ export default function VehiclesPage() {
                           disabled={deleteMutation.isPending}
                         >
                           <Trash className="h-4 w-4 mr-2" />
-                          Delete
+                          Obriši
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -182,42 +190,127 @@ export default function VehiclesPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            {customer && (
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/admin/customers">
-                  <ArrowLeft className="h-4 w-4" />
-                </Link>
-              </Button>
-            )}
-            <h1 className="text-3xl font-bold tracking-tight">
-              {customer ? `${customer.name}'s Vehicles` : "Vehicles"}
-            </h1>
-          </div>
+      <div className="container mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Vozila</h1>
           <Button asChild>
             <Link href="/admin/vehicles/add">
               <Plus className="mr-2 h-4 w-4" />
-              Add Vehicle
+              Dodaj Vozilo
             </Link>
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search vehicles..."
+              placeholder="Pretraži vozila..."
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full md:w-[200px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Sortiraj po" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="make">Marka</SelectItem>
+              <SelectItem value="model">Model</SelectItem>
+              <SelectItem value="year">Godina</SelectItem>
+              <SelectItem value="mileage">Kilometraža</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {renderVehiclesList()}
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Marka</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Godina</TableHead>
+                  <TableHead>VIN</TableHead>
+                  <TableHead>Tablice</TableHead>
+                  <TableHead>Kilometraža</TableHead>
+                  <TableHead>Vlasnik</TableHead>
+                  <TableHead className="text-right">Akcije</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingVehicles ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center">
+                      <div className="flex justify-center items-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredVehicles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      Nema pronađenih vozila
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredVehicles.map((vehicle) => (
+                    <TableRow key={vehicle.id}>
+                      <TableCell>{vehicle.make}</TableCell>
+                      <TableCell>{vehicle.model}</TableCell>
+                      <TableCell>{vehicle.year}</TableCell>
+                      <TableCell>{vehicle.vin}</TableCell>
+                      <TableCell>{vehicle.licensePlate}</TableCell>
+                      <TableCell>{vehicle.mileage.toLocaleString()} km</TableCell>
+                      <TableCell>{customersMap[vehicle.customerId]?.name || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu open={dropdownOpenId === vehicle.id} onOpenChange={(open) => setDropdownOpenId(open ? vehicle.id : null)}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Otvori meni</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Akcije</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/vehicles/${vehicle.id}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Izmeni
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/services/add?vehicleId=${vehicle.id}`}>
+                                <Wrench className="h-4 w-4 mr-2" />
+                                Dodaj Servis
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setDropdownOpenId(null);
+                                setTimeout(() => handleDeleteVehicle(vehicle.id), 0);
+                              }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              Obriši
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
 
       <CustomDialog

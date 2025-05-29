@@ -60,8 +60,8 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>Enter your details to create your account</CardDescription>
+          <CardTitle className="text-2xl">Kreirajte nalog</CardTitle>
+          <CardDescription>Unesite vaše podatke za kreiranje naloga</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -75,14 +75,14 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="name@example.com"
+                placeholder="ime@primer.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Lozinka</Label>
               <Input
                 id="password"
                 type="password"
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Potvrdite Lozinku</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -102,7 +102,7 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Account Type</Label>
+              <Label>Tip Naloga</Label>
               <RadioGroup
                 value={role}
                 onValueChange={(value) => setRole(value as UserRole)}
@@ -110,15 +110,15 @@ export default function RegisterPage() {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="client" id="client" />
-                  <Label htmlFor="client">Client</Label>
+                  <Label htmlFor="client">Klijent</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="admin" id="admin" />
-                  <Label htmlFor="admin">Workshop Admin</Label>
+                  <Label htmlFor="admin">M Auto Administrator</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="worker" id="worker" />
-                  <Label htmlFor="worker">Workshop Worker</Label>
+                  <Label htmlFor="worker">Servisni Radnik</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -126,19 +126,19 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
+                  Kreiranje naloga...
                 </>
               ) : (
-                "Register"
+                "Registrujte se"
               )}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
+            Već imate nalog?{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Login
+              Prijavite se
             </Link>
           </p>
         </CardFooter>

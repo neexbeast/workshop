@@ -14,11 +14,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2 } from "lucide-react"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Car, Loader2, FileText } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { useToast } from "@/hooks/use-toast"
-import { useCustomers, useDeleteCustomer } from "@/lib/api/hooks"
+import { useCustomers, useDeleteCustomer, useVehicles } from "@/lib/api/hooks"
 import { CustomDialog } from "@/components/ui/CustomDialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
+import { Filter } from "lucide-react"
 
 export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -27,9 +36,11 @@ export default function CustomersPage() {
   const { toast } = useToast()
 
   const { data: customersData, isLoading } = useCustomers(searchQuery)
+  const { data: vehiclesData } = useVehicles()
   const deleteCustomer = useDeleteCustomer()
 
   const customers = customersData?.customers ?? []
+  const vehicles = vehiclesData?.vehicles || []
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -45,23 +56,23 @@ export default function CustomersPage() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+      <div className="container mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Klijenti</h1>
           <Button asChild>
             <Link href="/admin/customers/add">
               <Plus className="mr-2 h-4 w-4" />
-              Add Customer
+              Dodaj Klijenta
             </Link>
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search customers..."
+              placeholder="Pretraži klijente..."
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -69,77 +80,77 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No customers found
-          </div>
-        ) : (
-          <div className="border rounded-lg">
+        <Card>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Ime</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Broj Vozila</TableHead>
+                  <TableHead className="text-right">Akcije</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.address || "N/A"}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/customers/${customer.id}`}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/vehicles?customerId=${customer.id}`}>
-                              <Car className="h-4 w-4 mr-2" />
-                              View Vehicles
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              document.body.click();
-                              setTimeout(() => handleDeleteCustomer(customer.id), 0);
-                            }}
-                            disabled={deleteCustomer.isPending}
-                          >
-                            <Trash className="h-4 w-4 mr-2" />
-                            {deleteCustomer.isPending ? "Deleting..." : "Delete"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      <div className="flex justify-center items-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      Nema pronađenih klijenata
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email || "-"}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>{vehicles.filter(v => v.customerId === customer.id).length}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Otvori meni</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Akcije</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/customers/${customer.id}`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Izmeni
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setTimeout(() => handleDeleteCustomer(customer.id), 0);
+                              }}
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              Obriši
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </div>
 
       <CustomDialog

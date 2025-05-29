@@ -58,14 +58,31 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   const navigation = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "Customers", href: "/admin/customers", icon: Users },
-    { name: "Vehicles", href: "/admin/vehicles", icon: Car },
-    { name: "Services", href: "/admin/services", icon: Wrench },
-    { name: "Schedule", href: "/admin/schedule", icon: Calendar },
-    { name: "Reports", href: "/admin/reports", icon: TrendingUp },
-    { name: "Reminders", href: "/admin/reminders", icon: Bell },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
+    {
+      name: "Kontrolna Tabla",
+      href: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      name: "Klijenti",
+      href: "/admin/customers",
+      icon: Users,
+    },
+    {
+      name: "Vozila",
+      href: "/admin/vehicles",
+      icon: Car,
+    },
+    {
+      name: "Servisi",
+      href: "/admin/services",
+      icon: Wrench,
+    },
+    {
+      name: "Podsetnici",
+      href: "/admin/reminders",
+      icon: Bell,
+    },
   ]
 
   // Don't render anything while loading or not mounted
@@ -136,10 +153,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between px-4 h-16 border-b">
-              <span className="font-bold text-xl">M Auto Admin</span>
+              <span className="font-bold text-xl">M Auto Administrator</span>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
-                <span className="sr-only">Close menu</span>
+                <span className="sr-only">Zatvori meni</span>
               </Button>
             </div>
             <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">

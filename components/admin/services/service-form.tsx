@@ -27,16 +27,16 @@ import { useQueryClient } from "@tanstack/react-query"
 
 // Service types for dropdown
 const serviceTypes = [
-  "Oil Change",
-  "Tire Rotation",
-  "Brake Replacement",
-  "Air Filter Replacement",
-  "Battery Check",
-  "Transmission Service",
-  "Coolant Flush",
-  "Spark Plug Replacement",
-  "Timing Belt Replacement",
-  "General Inspection",
+  "Zamena Ulja",
+  "Rotacija Guma",
+  "Zamena Kočnica",
+  "Zamena Vazdušnog Filtera",
+  "Provera Akumulatora",
+  "Servis Menjača",
+  "Zamena Antifriza",
+  "Zamena Svecica",
+  "Zamena Remena",
+  "Opšta Provera",
 ]
 
 interface ServiceFormProps {
@@ -206,11 +206,11 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isEdit ? "Edit Service Record" : "Add New Service Record"}</CardTitle>
+        <CardTitle>{isEdit ? "Izmeni Servis" : "Dodaj Novi Servis"}</CardTitle>
         <CardDescription>
           {isEdit
-            ? "Update service information in your database."
-            : "Enter service details to add it to your database."}
+            ? "Ažurirajte informacije o servisu u vašoj bazi podataka."
+            : "Unesite detalje servisa da biste ga dodali u vašu bazu podataka."}
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -221,20 +221,20 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
             </Alert>
           )}
           <div className="space-y-2">
-            <Label htmlFor="vehicleId">Vehicle</Label>
+            <Label htmlFor="vehicleId">Vozilo</Label>
             <Select
               value={formData.vehicleId}
               onValueChange={(value) => handleSelectChange("vehicleId", value)}
               disabled={isLoadingVehicles || !!vehicleId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a vehicle" />
+                <SelectValue placeholder="Izaberite vozilo" />
               </SelectTrigger>
               <SelectContent>
                 {isLoadingVehicles ? (
                   <div className="flex items-center justify-center p-2">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading vehicles...
+                    Učitavanje vozila...
                   </div>
                 ) : (
                   vehicles.map((vehicle) => (
@@ -247,15 +247,15 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
             </Select>
             {selectedVehicle && (
               <p className="text-sm text-muted-foreground mt-1">
-                Current mileage: {selectedVehicle.mileage.toLocaleString()} km
+                Trenutna kilometraža: {selectedVehicle.mileage.toLocaleString()} km
               </p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="serviceType">Service Type</Label>
+            <Label htmlFor="serviceType">Tip Servisa</Label>
             <Select value={formData.serviceType} onValueChange={(value) => handleSelectChange("serviceType", value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select service type" />
+                <SelectValue placeholder="Izaberite tip servisa" />
               </SelectTrigger>
               <SelectContent>
                 {serviceTypes.map((type) => (
@@ -268,7 +268,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="serviceDate">Service Date</Label>
+              <Label htmlFor="serviceDate">Datum Servisa</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -279,7 +279,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.serviceDate ? format(formData.serviceDate, "PPP") : <span>Pick a date</span>}
+                    {formData.serviceDate ? format(formData.serviceDate, "PPP") : <span>Izaberite datum</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -293,7 +293,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mileage">Mileage at Service (km)</Label>
+              <Label htmlFor="mileage">Kilometraža pri Servisu (km)</Label>
               <Input
                 id="mileage"
                 name="mileage"
@@ -306,7 +306,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Service Description</Label>
+            <Label htmlFor="description">Opis Servisa</Label>
             <Textarea
               id="description"
               name="description"
@@ -317,17 +317,17 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="parts">Parts Used (comma separated)</Label>
+            <Label htmlFor="parts">Korišćeni Delovi (odvojeni zarezom)</Label>
             <Input
               id="parts"
               name="parts"
               value={formData.parts}
               onChange={handleChange}
-              placeholder="e.g. Oil filter, Air filter, Brake pads"
+              placeholder="npr. Filter ulja, Vazdušni filter, Kočne pločice"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cost">Service Cost ($)</Label>
+            <Label htmlFor="cost">Cena Servisa (€)</Label>
             <Input
               id="cost"
               name="cost"
@@ -339,34 +339,42 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
               min={0}
             />
           </div>
-          <div className="space-y-4 border rounded-md p-4">
+          <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <Checkbox id="setReminder" checked={formData.setReminder} onCheckedChange={handleCheckboxChange} />
-              <Label htmlFor="setReminder">Set service reminder</Label>
+              <Checkbox
+                id="reminder"
+                checked={formData.reminderType !== "none"}
+                onCheckedChange={(checked) =>
+                  setFormData({
+                    ...formData,
+                    reminderType: checked ? "time" : "none",
+                  })
+                }
+              />
+              <Label htmlFor="reminder">Postavite podsetnik za sledeći servis</Label>
             </div>
-
-            {formData.setReminder && (
-              <div className="space-y-4 pt-2">
+            {formData.reminderType !== "none" && (
+              <div className="pl-6 space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reminderType">Reminder Type</Label>
+                  <Label>Tip Podsetnika</Label>
                   <Select
                     value={formData.reminderType}
                     onValueChange={(value) => handleSelectChange("reminderType", value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select reminder type" />
+                      <SelectValue placeholder="Izaberite tip podsetnika" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="time">Time-based</SelectItem>
-                      <SelectItem value="mileage">Mileage-based</SelectItem>
-                      <SelectItem value="both">Both time and mileage</SelectItem>
+                      <SelectItem value="time">Na osnovu vremena</SelectItem>
+                      <SelectItem value="mileage">Na osnovu kilometraže</SelectItem>
+                      <SelectItem value="both">Oba</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {(formData.reminderType === "time" || formData.reminderType === "both") && (
                   <div className="space-y-2">
-                    <Label htmlFor="reminderDate">Reminder Date</Label>
+                    <Label htmlFor="reminderDate">Datum Podsetnika</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -377,16 +385,15 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {formData.reminderDate ? format(formData.reminderDate, "PPP") : <span>Pick a date</span>}
+                          {formData.reminderDate ? format(formData.reminderDate, "PPP") : <span>Izaberite datum</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
                         <Calendar
                           mode="single"
-                          selected={formData.reminderDate || undefined}
+                          selected={formData.reminderDate}
                           onSelect={(date) => handleDateChange(date, "reminderDate")}
                           initialFocus
-                          disabled={(date) => date < new Date()}
                         />
                       </PopoverContent>
                     </Popover>
@@ -395,7 +402,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
 
                 {(formData.reminderType === "mileage" || formData.reminderType === "both") && (
                   <div className="space-y-2">
-                    <Label htmlFor="mileageThreshold">Mileage Threshold (km)</Label>
+                    <Label htmlFor="mileageThreshold">Prag Kilometraže (km)</Label>
                     <Input
                       id="mileageThreshold"
                       name="mileageThreshold"
@@ -406,7 +413,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                       min={0}
                     />
                     <p className="text-sm text-muted-foreground">
-                      Reminder will be sent when vehicle reaches{" "}
+                      Podsetnik će biti poslat kada vozilo dostigne{" "}
                       {(formData.mileage + formData.mileageThreshold).toLocaleString()} km
                     </p>
                   </div>
@@ -417,18 +424,18 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
-            Cancel
+            Otkaži
           </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isEdit ? "Updating..." : "Adding..."}
+                {isEdit ? "Ažuriranje..." : "Dodavanje..."}
               </>
             ) : isEdit ? (
-              "Update Service"
+              "Ažuriraj Servis"
             ) : (
-              "Add Service"
+              "Dodaj Servis"
             )}
           </Button>
         </CardFooter>

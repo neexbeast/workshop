@@ -94,9 +94,10 @@ export function CustomDialog({ open, onClose, title, description, children }: Cu
         {description && <div className="custom-dialog-desc">{description}</div>}
         <div className="custom-dialog-footer">
           {children}
-          <button className="custom-dialog-btn cancel" onClick={onClose}>
-            Cancel
-          </button>
+          <button className="rounded bg-slate-600 h-20 w-20 justify-center align-middle"
+             onClick={onClose} >
+                Zatvori
+              </button>
         </div>
       </div>
     </div>

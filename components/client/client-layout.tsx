@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X, Calendar } from "lucide-react"
+import { LayoutDashboard, Car, FileText, Bell, Settings, LogOut, Menu, X, Calendar, History } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -58,12 +58,26 @@ export function ClientLayout({ children }: ClientLayoutProps) {
   }
 
   const navigation = [
-    { name: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
-    { name: "Schedule Service", href: "/schedule", icon: Calendar },
-    { name: "My Vehicles", href: "/client/vehicles", icon: Car },
-    { name: "Service History", href: "/client/service-history", icon: FileText },
-    { name: "Reminders", href: "/client/reminders", icon: Bell },
-    { name: "Settings", href: "/client/settings", icon: Settings },
+    {
+      name: "Kontrolna Tabla",
+      href: "/client/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      name: "Moja Vozila",
+      href: "/client/vehicles",
+      icon: Car,
+    },
+    {
+      name: "Istorija Servisa",
+      href: "/client/service-history",
+      icon: History,
+    },
+    {
+      name: "Podsetnici",
+      href: "/client/reminders",
+      icon: Bell,
+    },
   ]
 
   // Don't render anything while loading or not mounted
@@ -82,7 +96,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow border-r pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="font-bold text-xl">M Auto Client</span>
+            <span className="font-bold text-xl">M Auto Klijent</span>
           </div>
           <div className="mt-5 flex-grow flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
@@ -134,10 +148,10 @@ export function ClientLayout({ children }: ClientLayoutProps) {
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between px-4 h-16 border-b">
-              <span className="font-bold text-xl">M Auto Client</span>
+              <span className="font-bold text-xl">M Auto Klijent</span>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
-                <span className="sr-only">Close menu</span>
+                <span className="sr-only">Zatvori meni</span>
               </Button>
             </div>
             <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">

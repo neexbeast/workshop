@@ -109,21 +109,27 @@ export default function CustomersPage() {
                   </TableRow>
                 ) : (
                   filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
+                  <TableRow key={customer.id}>
                       <TableCell>{customer.name}</TableCell>
                       <TableCell>{customer.email || "-"}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
+                    <TableCell>{customer.phone}</TableCell>
                       <TableCell>{vehicles.filter(v => v.customerId === customer.id).length}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
                               <span className="sr-only">Otvori meni</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Akcije</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/vehicles?customerId=${customer.id}`}>
+                                <Car className="h-4 w-4 mr-2" />
+                                Prikaži Vozila
+                              </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/admin/customers/${customer.id}`}>
                                 <Edit className="h-4 w-4 mr-2" />
@@ -141,10 +147,10 @@ export default function CustomersPage() {
                               <Trash className="h-4 w-4 mr-2" />
                               Obriši
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
                   ))
                 )}
               </TableBody>

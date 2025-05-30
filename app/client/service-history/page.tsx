@@ -72,37 +72,37 @@ export default function ServiceHistoryPage() {
         </div>
 
         <div className="bg-card rounded-lg shadow">
-          <Table>
-            <TableHeader>
-              <TableRow>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                 <TableHead>Datum</TableHead>
                 <TableHead>Vozilo</TableHead>
                 <TableHead>Tip Servisa</TableHead>
                 <TableHead>Kilometraža</TableHead>
                 <TableHead>Cena</TableHead>
                 <TableHead className="text-right">Akcije</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
               {filteredServices.map((service) => (
-                <TableRow key={service.id}>
+                          <TableRow key={service.id}>
                   <TableCell>{format(new Date(service.serviceDate), "dd.MM.yyyy")}</TableCell>
-                  <TableCell>
+                            <TableCell>
                     {vehicles[service.vehicleId]?.make} {vehicles[service.vehicleId]?.model}
-                  </TableCell>
-                  <TableCell>{service.serviceType}</TableCell>
-                  <TableCell>{service.mileage.toLocaleString()} km</TableCell>
+                            </TableCell>
+                            <TableCell>{service.serviceType}</TableCell>
+                            <TableCell>{service.mileage.toLocaleString()} km</TableCell>
                   <TableCell>{service.cost.toLocaleString()} KM</TableCell>
-                  <TableCell className="text-right">
+                            <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setSelectedService(service)}>
                       Detalji
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+                  </TableBody>
+                </Table>
+                  </div>
 
         <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)}>
           <DialogContent>
@@ -115,7 +115,7 @@ export default function ServiceHistoryPage() {
                   <div>
                     <p className="text-muted-foreground">Datum</p>
                     <p className="font-medium">{format(new Date(selectedService.serviceDate), "dd.MM.yyyy")}</p>
-                  </div>
+                </div>
                   <div>
                     <p className="text-muted-foreground">Vozilo</p>
                     <p className="font-medium">

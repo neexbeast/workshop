@@ -19,26 +19,17 @@ import { servicesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import type { Vehicle, Customer } from "@/lib/mongodb/models"
+import type { Vehicle, Service } from "@/lib/mongodb/models"
 import { format } from "date-fns"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useServices, useVehicles, useCustomers } from "@/lib/api/hooks"
+import { useServices, useVehicles } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CustomDialog } from "@/components/ui/CustomDialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null)
-  const [serviceDetails, setServiceDetails] = useState<any | null>(null)
+  const [serviceDetails, setServiceDetails] = useState<{ service: Service; vehicle: Vehicle | null } | null>(null)
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -48,18 +39,12 @@ export default function ServicesPage() {
   // Fetch data using React Query
   const { data: servicesData, isLoading: isLoadingServices } = useServices(undefined, vehicleId)
   const { data: vehiclesData } = useVehicles()
-  const { data: customersData } = useCustomers()
 
-  // Create lookup maps for vehicles and customers
+  // Create lookup map for vehicles
   const vehicles = vehiclesData?.vehicles.reduce((acc, vehicle) => {
     acc[vehicle.id] = vehicle
     return acc
   }, {} as { [key: string]: Vehicle }) || {}
-
-  const customers = customersData?.customers.reduce((acc, customer) => {
-    acc[customer.id] = customer
-    return acc
-  }, {} as { [key: string]: Customer }) || {}
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -92,138 +77,40 @@ export default function ServicesPage() {
       vehicles[service.vehicleId]?.model.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Filter services based on date
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const upcomingServices = filteredServices
-    .filter(service => new Date(service.serviceDate) >= today)
-    .sort((a, b) => new Date(a.serviceDate).getTime() - new Date(b.serviceDate).getTime())
-
-  const pastServices = filteredServices
-    .filter(service => new Date(service.serviceDate) < today)
-    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
-
-  const allServices = filteredServices
-    .sort((a, b) => new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime())
-
-  const displayedServices = {
-    all: allServices,
-    upcoming: upcomingServices,
-    past: pastServices
-  }[activeTab] || []
-
   const handleDeleteService = async (id: string) => {
     if (!auth.firebaseUser) return
     setServiceToDelete(id)
-  }
-
-  function renderServicesList() {
-    if (isLoadingServices) {
-      return (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      )
-    }
-
-    return (
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Datum</TableHead>
-              <TableHead>Vozilo</TableHead>
-              <TableHead>Tablice</TableHead>
-              <TableHead>Tip Servisa</TableHead>
-              <TableHead>Kilometraža</TableHead>
-              <TableHead>Cena</TableHead>
-              <TableHead className="text-right">Akcije</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayedServices.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center">
-                  Nema pronađenih servisa
-                </TableCell>
-              </TableRow>
-            ) : (
-              displayedServices.map((service) => {
-                const vehicle = vehicles[service.vehicleId]
-                const customer = vehicle ? customers[vehicle.customerId] : null
-
-                return (
-                  <TableRow key={service.id}>
-                    <TableCell>{format(new Date(service.serviceDate), "dd.MM.yyyy")}</TableCell>
-                    <TableCell>
-                      {vehicle ? (
-                        <Link href={`/admin/vehicles/${vehicle.id}`} className="hover:underline">
-                          {vehicle.make} {vehicle.model} ({vehicle.year})
-                        </Link>
-                      ) : (
-                        "Unknown Vehicle"
-                      )}
-                    </TableCell>
-                    <TableCell>{vehicle?.licensePlate || "-"}</TableCell>
-                    <TableCell>{service.serviceType}</TableCell>
-                    <TableCell>{service.mileage.toLocaleString()} km</TableCell>
-                    <TableCell>{service.cost.toLocaleString()} KM</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Otvori meni</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Akcije</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() => setServiceDetails({ service, vehicle })}
-                          >
-                            <FileText className="mr-2 h-4 w-4" />
-                            Detalji
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/services/${service.id}`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Izmeni
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.preventDefault();
-                              document.body.click();
-                              setTimeout(() => handleDeleteService(service.id), 0);
-                            }}
-                            className="text-red-600"
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash className="mr-2 h-4 w-4" />
-                            Obriši
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    )
   }
 
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Servisi</h1>
+          <div className="flex items-center gap-4">
+            {vehicleId && (
+              <Button variant="ghost" asChild>
+                <Link href="/admin/services">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Nazad
+                </Link>
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold">
+                {vehicleId && vehicles[vehicleId] 
+                  ? `${vehicles[vehicleId].make} ${vehicles[vehicleId].model} ${vehicles[vehicleId].licensePlate} Servisi`
+                  : "Servisi"
+                }
+              </h1>
+              {vehicleId && vehicles[vehicleId] && (
+                <p className="text-muted-foreground">
+                  Pregled svih servisa za ovo vozilo
+                </p>
+              )}
+            </div>
+          </div>
           <Button asChild>
-            <Link href="/admin/services/add">
+            <Link href={`/admin/services/add${vehicleId ? `?vehicleId=${vehicleId}` : ''}`}>
               <Plus className="mr-2 h-4 w-4" />
               Dodaj Servis
             </Link>
@@ -266,14 +153,14 @@ export default function ServicesPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : displayedServices.length === 0 ? (
+                ) : filteredServices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                       Nema pronađenih servisa
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedServices.map((service) => {
+                  filteredServices.map((service) => {
                     const vehicle = vehicles[service.vehicleId]
                     return (
                       <TableRow key={service.id}>
@@ -342,8 +229,8 @@ export default function ServicesPage() {
       <CustomDialog
         open={!!serviceToDelete}
         onClose={() => setServiceToDelete(null)}
-        title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete the service record."
+        title="Da li ste sigurni?"
+        description="Ova akcija se ne može poništiti. Ovo će trajno obrisati servis."
       >
         <button
           style={{ background: "red", color: "white", marginRight: 8, padding: "8px 16px", borderRadius: 4, border: "none" }}
@@ -354,7 +241,7 @@ export default function ServicesPage() {
             }
           }}
         >
-          Delete
+          Obriši
         </button>
       </CustomDialog>
 
@@ -374,7 +261,9 @@ export default function ServicesPage() {
             <p><b>Cena:</b> {serviceDetails.service.cost.toLocaleString()} KM</p>
             <p><b>Opis:</b> {serviceDetails.service.description || '-'}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              
+              <Button variant="outline" onClick={() => setServiceDetails(null)}>
+                Zatvori
+              </Button>
             </div>
           </div>
         </CustomDialog>

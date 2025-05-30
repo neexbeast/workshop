@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import { RootLayoutClient } from "./layout-client"
 
 export const metadata: Metadata = {
-  title: "Workshop Service Manager",
+  title: "M Auto Seris",
   description: "Manage your workshop services and customer vehicles",
 }
 

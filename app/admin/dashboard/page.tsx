@@ -122,7 +122,7 @@ export default function AdminDashboard() {
       }
     })
 
-  return (
+      return (
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
               <CardDescription>Poslednjih 5 izvršenih servisa</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+        <div className="space-y-4">
                 {recentServices.map((service) => {
                   const vehicle = vehicles[service.vehicleId]
                   return (
@@ -217,40 +217,40 @@ export default function AdminDashboard() {
               <CardDescription>Servisi koji su zakazani za sledećih 7 dana</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
+        <Table>
+          <TableHeader>
+            <TableRow>
                     <TableHead>Datum</TableHead>
                     <TableHead>Klijent</TableHead>
                     <TableHead>Vozilo</TableHead>
                     <TableHead>Tip Servisa</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
                   {upcomingServices.map((service) => {
-                    const vehicle = vehicles[service.vehicleId]
-                    const customer = vehicle ? customers[vehicle.customerId] : null
-                    return (
-                      <TableRow key={service.id}>
+              const vehicle = vehicles[service.vehicleId]
+              const customer = vehicle ? customers[vehicle.customerId] : null
+              return (
+                <TableRow key={service.id}>
                         <TableCell>{format(new Date(service.serviceDate), "dd.MM.yyyy")}</TableCell>
                         <TableCell>{customer?.name || "Unknown Customer"}</TableCell>
-                        <TableCell>
+                  <TableCell>
                           {vehicle ? `${vehicle.make} ${vehicle.model}` : "Unknown Vehicle"}
-                        </TableCell>
+                  </TableCell>
                         <TableCell>{service.serviceType}</TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+              </CardContent>
+            </Card>
           <Card className="col-span-3">
-            <CardHeader>
+              <CardHeader>
               <CardTitle>Najčešći Servisi</CardTitle>
               <CardDescription>Top 5 servisa po učestalosti</CardDescription>
-            </CardHeader>
-            <CardContent>
+              </CardHeader>
+              <CardContent>
               <div className="space-y-4">
                 {serviceStatsArray.map((stat, index) => (
                   <div key={index} className="flex items-center">
@@ -262,8 +262,8 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
         </div>
       </div>
     </AdminLayout>

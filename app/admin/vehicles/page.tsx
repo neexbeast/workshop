@@ -14,30 +14,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, AlertCircle, ArrowLeft, Loader2, FileText } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Plus, Search, MoreHorizontal, Edit, Trash, Wrench, Loader2, FileText, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/firebase/auth-hooks"
 import { vehiclesApi } from "@/lib/api/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { useSearchParams } from "next/navigation"
-import { useVehicles, useCustomer, useCustomers } from "@/lib/api/hooks"
+import { useVehicles, useCustomers } from "@/lib/api/hooks"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CustomDialog } from "@/components/ui/CustomDialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { Filter } from "lucide-react"
 
 export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null)
   const [dropdownOpenId, setDropdownOpenId] = useState<string | null>(null)
-  const [sortBy, setSortBy] = useState("make")
   const auth = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
@@ -46,7 +36,6 @@ export default function VehiclesPage() {
 
   // Fetch data using React Query
   const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles(undefined, customerId)
-  const { data: customerData } = useCustomer(customerId || "")
   const { data: customersData } = useCustomers()
 
   // Delete mutation
@@ -70,7 +59,6 @@ export default function VehiclesPage() {
   })
 
   const vehicles = vehiclesData?.vehicles || []
-  const customer = customerData?.customer
   const customersMap = customersData?.customers?.reduce((acc, customer) => {
     acc[customer.id] = customer
     return acc
@@ -158,6 +146,12 @@ export default function VehiclesPage() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
+                          <Link href={`/admin/services?vehicleId=${vehicle.id}`}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Prikaži Servise
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
                           <Link href={`/admin/services/add?vehicleId=${vehicle.id}`}>
                             <Wrench className="h-4 w-4 mr-2" />
                             Dodaj Servis
@@ -192,9 +186,31 @@ export default function VehiclesPage() {
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Vozila</h1>
+          <div className="flex items-center gap-4">
+            {customerId && (
+              <Button variant="ghost" asChild>
+                <Link href="/admin/vehicles">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Nazad
+                </Link>
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold">
+                {customerId && customersMap[customerId]
+                  ? `Vozila - ${customersMap[customerId].name}`
+                  : "Vozila"
+                }
+              </h1>
+              {customerId && customersMap[customerId] && (
+                <p className="text-muted-foreground">
+                  Pregled svih vozila za ovog klijenta
+                </p>
+              )}
+            </div>
+          </div>
           <Button asChild>
-            <Link href="/admin/vehicles/add">
+            <Link href={`/admin/vehicles/add${customerId ? `?customerId=${customerId}` : ''}`}>
               <Plus className="mr-2 h-4 w-4" />
               Dodaj Vozilo
             </Link>
@@ -232,7 +248,7 @@ export default function VehiclesPage() {
               <TableBody>
                 {isLoadingVehicles ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       <div className="flex justify-center items-center py-4">
                         <Loader2 className="h-6 w-6 animate-spin" />
                       </div>
@@ -240,7 +256,7 @@ export default function VehiclesPage() {
                   </TableRow>
                 ) : filteredVehicles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
                       Nema pronađenih vozila
                     </TableCell>
                   </TableRow>
@@ -268,6 +284,12 @@ export default function VehiclesPage() {
                               <Link href={`/admin/vehicles/${vehicle.id}`}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Izmeni
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/services?vehicleId=${vehicle.id}`}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Prikaži Servise
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
@@ -304,8 +326,8 @@ export default function VehiclesPage() {
       <CustomDialog
         open={!!vehicleToDelete}
         onClose={() => setVehicleToDelete(null)}
-        title="Are you sure?"
-        description="This action cannot be undone. This will permanently delete the vehicle and all associated service records."
+        title="Da li ste sigurni?"
+        description="Ova akcija se ne može poništiti. Ovo će trajno obrisati vozilo i sve povezane servise."
       >
         <button
           style={{ background: "red", color: "white", marginRight: 8, padding: "8px 16px", borderRadius: 4, border: "none" }}
@@ -316,7 +338,7 @@ export default function VehiclesPage() {
             }
           }}
         >
-          Delete
+          Obriši
         </button>
       </CustomDialog>
     </AdminLayout>

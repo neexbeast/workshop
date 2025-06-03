@@ -37,8 +37,8 @@ export function SendReminders() {
       })
 
       toast({
-        title: "Reminders sent",
-        description: `Successfully sent ${response.count} service reminders.`,
+        title: "Podsetnici su poslati",
+        description: `Uspešno je poslat ${response.count} podsetnika za servis.`,
       })
     } catch (err) {
       const error = err as ApiError
@@ -49,8 +49,8 @@ export function SendReminders() {
 
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to send service reminders.",
+        title: "Greška",
+        description: "Greška prilikom slanja podsetnika za servis. Pokušajte ponovno.",
       })
     } finally {
       setIsLoading(false)

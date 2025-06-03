@@ -95,8 +95,8 @@ export default function AdminSchedulePage() {
   ) => {
     if (!firebaseUser) {
       toast({
-        title: "Error",
-        description: "You must be logged in to save availability",
+        title: "Greška",
+        description: "Morate biti prijavljeni da biste sačuvali dostupnost.",
         variant: "destructive",
       })
       return
@@ -111,14 +111,14 @@ export default function AdminSchedulePage() {
       })
 
       toast({
-        title: "Success",
-        description: "Availability settings have been saved.",
+        title: "Dostupnost je sačuvana",
+        description: "Dostupnost je uspešno sačuvana.",
       })
     } catch (error) {
       console.error("Error saving availability:", error)
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save availability settings",
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška prilikom sačuvanja dostupnosti. Pokušajte ponovno.",
         variant: "destructive",
       })
     }
@@ -129,8 +129,8 @@ export default function AdminSchedulePage() {
     const newSlots = generateTimeSlots(editingWorkingHours)
     handleSaveAvailability(isDateBlocked, editingWorkingHours, newSlots)
     toast({
-      title: "Success",
-      description: "Working hours have been updated.",
+      title: "Radno vreme je ažurirano",
+      description: "Radno vreme je uspešno ažurirano.",
     })
   }
 

@@ -44,15 +44,15 @@ export default function VehiclesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] })
       toast({
-        title: "Success",
-        description: "Vehicle deleted successfully",
+        title: "Vozilo je obrisano",
+        description: "Vozilo je uspešno obrisano.",
       })
     },
     onError: (error) => {
       console.error("Error deleting vehicle:", error)
       toast({
-        title: "Error",
-        description: "Failed to delete vehicle. Please try again.",
+        title: "Greška",
+        description: "Greška prilikom brisanja vozila. Pokušajte ponovno.",
         variant: "destructive",
       })
     },

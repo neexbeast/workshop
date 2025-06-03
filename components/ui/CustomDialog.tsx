@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "./button";
 
 type CustomDialogProps = {
   open: boolean;
@@ -92,12 +93,13 @@ export function CustomDialog({ open, onClose, title, description, children }: Cu
       >
         {title && <h2 className="custom-dialog-title">{title}</h2>}
         {description && <div className="custom-dialog-desc">{description}</div>}
-        <div className="custom-dialog-footer">
+        <div className="">
           {children}
-          <button className="rounded bg-slate-600 h-20 w-20 justify-center align-middle"
-             onClick={onClose} >
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <Button variant="outline" onClick={() => onClose()}>
                 Zatvori
-              </button>
+              </Button>
+            </div>
         </div>
       </div>
     </div>

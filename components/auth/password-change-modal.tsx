@@ -29,8 +29,8 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
     
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Passwords do not match",
-        description: "Please make sure your passwords match.",
+        title: "Lozinke se ne poklapaju",
+        description: "Molimo vas da se pobrinite da se lozinke poklapaju.",
         variant: "destructive",
       })
       return
@@ -38,8 +38,8 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
 
     if (newPassword.length < 6) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters long.",
+        title: "Lozinka je prekratka",
+        description: "Lozinka mora imati najmanje 6 karaktera.",
         variant: "destructive",
       })
       return
@@ -68,16 +68,16 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
       }
       
       toast({
-        title: "Password updated",
-        description: "Your password has been changed successfully.",
+        title: "Lozinka je promenjena",
+        description: "Lozinka je uspešno promenjena.",
       })
       
       onClose()
     } catch (error) {
       console.error("Error updating password:", error)
       toast({
-        title: "Error",
-        description: "Failed to update password. Please try again.",
+        title: "Greška",
+        description: "Greška prilikom promene lozinke. Pokušajte ponovno.",
         variant: "destructive",
       })
     } finally {
@@ -89,9 +89,9 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Your Password</DialogTitle>
+          <DialogTitle>Promena lozinke</DialogTitle>
           <DialogDescription>
-            Please set a new password for your account. For security reasons, you should change your temporary password.
+            Molimo vas da postavite novu lozinku za svoj nalog. Iz bezbednosnih razloga, trebalo bi da promenite svoju privremenu lozinku.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -121,7 +121,7 @@ export function PasswordChangeModal({ isOpen, onClose }: PasswordChangeModalProp
           </div>
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? "Updating..." : "Update Password"}
+              {loading ? "Ažuriranje..." : "Ažuriraj lozinku"}
             </Button>
           </DialogFooter>
         </form>

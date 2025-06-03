@@ -29,8 +29,8 @@ export default function ChangePasswordPage() {
     if (newPassword !== confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Passwords do not match"
+        title: "Greška",
+        description: "Lozinke se ne poklapaju"
       })
       return
     }
@@ -38,8 +38,8 @@ export default function ChangePasswordPage() {
     if (newPassword.length < 6) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Password must be at least 6 characters long"
+        title: "Greška",
+        description: "Lozinka mora imati najmanje 6 karaktera"
       })
       return
     }
@@ -54,16 +54,16 @@ export default function ChangePasswordPage() {
       await updatePassword(user, newPassword)
       
       toast({
-        title: "Success",
-        description: "Password changed successfully"
+        title: "Lozinka je promenjena",
+        description: "Lozinka je uspešno promenjena."
       })
       router.push("/") // Redirect to home page
     } catch (error) {
       console.error("Error changing password:", error)
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to change password. Please try again."
+        title: "Greška",
+        description: "Greška prilikom promene lozinke. Pokušajte ponovno."
       })
     } finally {
       setLoading(false)

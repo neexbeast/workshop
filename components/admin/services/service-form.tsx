@@ -55,12 +55,13 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
     description: service?.description || "",
     parts: service?.parts?.join(", ") || "",
     cost: service?.cost || 0,
-    reminderDate: null as Date | null,
-    reminderType: "time",
+    reminderDate: undefined as Date | undefined,
+    reminderType: "time" as "time" | "mileage" | "both" | "none",
     mileageThreshold: 5000,
     setReminder: false,
   })
   const [error, setError] = useState("")
+  const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false)
@@ -105,10 +106,14 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    // Clear validation error for this field
+    setValidationErrors((prev) => ({ ...prev, [name]: false }))
   }
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
+    // Clear validation error for this field
+    setValidationErrors((prev) => ({ ...prev, [name]: false }))
 
     // If vehicle is changed, update the mileage
     if (name === "vehicleId") {
@@ -126,28 +131,36 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: Number.parseFloat(value) || 0 }))
+    // Clear validation error for this field
+    setValidationErrors((prev) => ({ ...prev, [name]: false }))
   }
 
   const handleDateChange = (date: Date | undefined, field: string) => {
     if (date) {
       setFormData((prev) => ({ ...prev, [field]: date }))
-    }
-  }
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, setReminder: checked }))
-
-    // If reminder is checked, set a default reminder date (6 months from service date)
-    if (checked && !formData.reminderDate) {
-      const reminderDate = new Date(formData.serviceDate)
-      reminderDate.setMonth(reminderDate.getMonth() + 6)
-      setFormData((prev) => ({ ...prev, reminderDate }))
+      // Clear validation error for this field
+      setValidationErrors((prev) => ({ ...prev, [field]: false }))
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    
+    // Validate required fields
+    const errors: Record<string, boolean> = {}
+    if (!formData.vehicleId) errors.vehicleId = true
+    if (!formData.serviceType) errors.serviceType = true
+    if (!formData.description) errors.description = true
+    if (!formData.cost || formData.cost <= 0) errors.cost = true
+    
+    setValidationErrors(errors)
+    
+    // If there are validation errors, don't submit
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+    
     setIsLoading(true)
 
     try {
@@ -163,26 +176,24 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
         technicianId: auth.firebaseUser?.uid || "",
       }
 
-      // Add reminder data if reminder is set
-      if (formData.setReminder) {
-        Object.assign(serviceData, {
-          reminderDate: formData.reminderDate,
-          reminderType: formData.reminderType,
-          mileageThreshold: formData.mileageThreshold,
-        })
-      }
-
       if (isEdit && service) {
         await servicesApi.updateService({ firebaseUser: auth.firebaseUser }, service.id, serviceData)
         toast({
-          title: "Service updated",
-          description: "Service record has been updated successfully.",
+          title: "Servis je uspešno ažuriran",
+          description: "Servis je uspešno ažuriran.",
         })
       } else {
         await servicesApi.createService({ firebaseUser: auth.firebaseUser }, serviceData)
+        
+        // If reminder is set, create a reminder
+        if (formData.setReminder && formData.reminderDate) {
+          // TODO: Create reminder using the reminder API
+          // This will be implemented when the reminder API is available
+        }
+        
         toast({
-          title: "Service added",
-          description: "New service record has been added successfully.",
+          title: "Servis je uspešno dodat",
+          description: "Novi servis je uspešno dodat.",
         })
       }
 
@@ -227,7 +238,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
               onValueChange={(value) => handleSelectChange("vehicleId", value)}
               disabled={isLoadingVehicles || !!vehicleId}
             >
-              <SelectTrigger>
+              <SelectTrigger className={validationErrors.vehicleId ? "border-red-500" : ""}>
                 <SelectValue placeholder="Izaberite vozilo" />
               </SelectTrigger>
               <SelectContent>
@@ -245,6 +256,9 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                 )}
               </SelectContent>
             </Select>
+            {validationErrors.vehicleId && (
+              <p className="text-sm text-red-500">Izaberite vozilo</p>
+            )}
             {selectedVehicle && (
               <p className="text-sm text-muted-foreground mt-1">
                 Trenutna kilometraža: {selectedVehicle.mileage.toLocaleString()} km
@@ -254,7 +268,7 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
           <div className="space-y-2">
             <Label htmlFor="serviceType">Tip Servisa</Label>
             <Select value={formData.serviceType} onValueChange={(value) => handleSelectChange("serviceType", value)}>
-              <SelectTrigger>
+              <SelectTrigger className={validationErrors.serviceType ? "border-red-500" : ""}>
                 <SelectValue placeholder="Izaberite tip servisa" />
               </SelectTrigger>
               <SelectContent>
@@ -265,6 +279,9 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
                 ))}
               </SelectContent>
             </Select>
+            {validationErrors.serviceType && (
+              <p className="text-sm text-red-500">Izaberite tip servisa</p>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -314,7 +331,11 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
               onChange={handleChange}
               required
               rows={3}
+              className={validationErrors.description ? "border-red-500" : ""}
             />
+            {validationErrors.description && (
+              <p className="text-sm text-red-500">Unesite opis servisa</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="parts">Korišćeni Delovi (odvojeni zarezom)</Label>
@@ -337,7 +358,11 @@ export function ServiceForm({ service, vehicleId, onSuccess, isEdit = false }: S
               onChange={handleNumberChange}
               required
               min={0}
+              className={validationErrors.cost ? "border-red-500" : ""}
             />
+            {validationErrors.cost && (
+              <p className="text-sm text-red-500">Unesite validnu cenu servisa</p>
+            )}
           </div>
           <div className="space-y-2">
             <div className="flex items-center space-x-2">

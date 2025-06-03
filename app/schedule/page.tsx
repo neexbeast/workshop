@@ -89,8 +89,8 @@ export default function SchedulePage() {
     } catch (error) {
       console.error("Error fetching vehicles:", error)
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch your vehicles. Please try again.",
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška prilikom dobavljanja vozila. Pokušajte ponovno.",
         variant: "destructive",
       })
       setVehicles([])
@@ -123,8 +123,8 @@ export default function SchedulePage() {
     } catch (error) {
       console.error("Error fetching time slots:", error)
       toast({
-        title: "Error",
-        description: "Failed to fetch available time slots",
+        title: "Greška",
+        description: "Greška prilikom dobavljanja dostupnih vremenskih slotova. Pokušajte ponovno.",
         variant: "destructive",
       })
       setTimeSlots([])
@@ -148,8 +148,8 @@ export default function SchedulePage() {
   const handleScheduleService = async () => {
     if (!auth.firebaseUser) {
       toast({
-        title: "Error",
-        description: "You must be logged in to schedule a service",
+        title: "Greška",
+        description: "Morate biti prijavljeni da biste zakazali servis.",
         variant: "destructive",
       })
       return
@@ -157,8 +157,8 @@ export default function SchedulePage() {
 
     if (!selectedVehicle || !selectedService || !selectedTime) {
       toast({
-        title: "Error",
-        description: "Please select a vehicle, service type, and time slot",
+        title: "Greška",
+        description: "Molimo vas da izaberete vozilo, tip servisa i vremenski slot.",
         variant: "destructive",
       })
       return
@@ -187,8 +187,8 @@ export default function SchedulePage() {
       }
 
       toast({
-        title: "Success",
-        description: "Your service has been scheduled successfully.",
+        title: "Servis je zakazan",
+        description: "Servis je uspešno zakazan.",
       })
       
       // Close the confirmation dialog
@@ -206,8 +206,8 @@ export default function SchedulePage() {
     } catch (error) {
       console.error("Error scheduling service:", error)
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to schedule service",
+        title: "Greška",
+        description: error instanceof Error ? error.message : "Greška prilikom zakazivanja servisa. Pokušajte ponovno.",
         variant: "destructive",
       })
     } finally {

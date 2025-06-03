@@ -173,14 +173,14 @@ export default function CustomersPage() {
               try {
                 await deleteCustomer.mutateAsync(customerToDelete);
                 toast({
-                  title: "Customer deleted",
-                  description: "The customer has been deleted successfully.",
+                  title: "Klijent je obrisan",
+                  description: "Klijent je uspešno obrisan.",
                 });
               } catch (error) {
                 console.error("Error deleting customer:", error);
                 toast({
-                  title: "Error",
-                  description: "Failed to delete customer. Please try again.",
+                  title: "Greška",
+                  description: "Greška prilikom brisanja klijenta. Pokušajte ponovno.",
                   variant: "destructive",
                 });
               }

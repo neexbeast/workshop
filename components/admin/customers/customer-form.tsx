@@ -55,14 +55,14 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
           data: formData,
         })
         toast({
-          title: "Success",
-          description: "Customer updated successfully"
+          title: "Klijent je ažuriran",
+          description: "Klijent je uspešno ažuriran."
         })
       } else {
         await createCustomer.mutateAsync(formData)
         toast({
-          title: "Success",
-          description: "Customer created successfully"
+          title: "Klijent je dodat",
+          description: "Klijent je uspešno dodat."
         })
       }
       router.push("/admin/customers")
@@ -72,8 +72,8 @@ export function CustomerForm({ customer, isEdit }: CustomerFormProps) {
       setError(errorMessage)
       console.error("Error submitting form:", error)
       toast({
-        title: "Error",
-        description: "Failed to save customer",
+        title: "Greška",
+        description: "Greška prilikom sačuvanja klijenta. Pokušajte ponovno.",
         variant: "destructive"
       })
     }

@@ -52,15 +52,15 @@ export default function ServicesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] })
       toast({
-        title: "Success",
-        description: "Service deleted successfully",
+        title: "Servis je obrisan",
+        description: "Servis je uspešno obrisan.",
       })
     },
     onError: (error) => {
       console.error("Error deleting service:", error)
       toast({
-        title: "Error",
-        description: "Failed to delete service. Please try again.",
+        title: "Greška",
+        description: "Greška prilikom brisanja servisa. Pokušajte ponovno.",
         variant: "destructive",
       })
     },
@@ -260,11 +260,7 @@ export default function ServicesPage() {
             <p><b>Kilometraža:</b> {serviceDetails.service.mileage.toLocaleString()} km</p>
             <p><b>Cena:</b> {serviceDetails.service.cost.toLocaleString()} KM</p>
             <p><b>Opis:</b> {serviceDetails.service.description || '-'}</p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <Button variant="outline" onClick={() => setServiceDetails(null)}>
-                Zatvori
-              </Button>
-            </div>
+            
           </div>
         </CustomDialog>
       )}

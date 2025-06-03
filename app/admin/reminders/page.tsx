@@ -45,14 +45,14 @@ export default function RemindersPage() {
     try {
       await remindersApi.sendReminder({ firebaseUser: auth.firebaseUser }, reminderId)
       toast({
-        title: "Success",
-        description: "Reminder sent successfully",
+        title: "Podsetnik je poslat",
+        description: "Podsetnik je uspešno poslat.",
       })
     } catch (error) {
       console.error("Error sending reminder:", error)
       toast({
-        title: "Error",
-        description: "Failed to send reminder",
+        title: "Greška",
+        description: "Greška prilikom slanja podsetnika. Pokušajte ponovno.",
         variant: "destructive",
       })
     } finally {

@@ -62,15 +62,12 @@ export async function GET(req: NextRequest) {
       query.vehicleId = vehicleId
     }
 
-    // For client users, only return services for their vehicles
-    if (decodedToken.role === "client") {
+    // For admin, worker, or client users, only return services for their customers' vehicles
+    if (["admin", "worker", "client"].includes(decodedToken.role)) {
       // First, get all customers associated with this user
-      const customers = await db.collection("customers").find({ userId: decodedToken.uid }).toArray()
-
-      const customerIds = customers.map((customer) => customer._id.toString())
-
+      const customers = await db.collection("customers").find({ userId: decodedToken.uid }).toArray();
+      const customerIds = customers.map((customer) => customer._id.toString());
       if (customerIds.length === 0) {
-        // If no customers found, return empty array
         return NextResponse.json({
           services: [],
           pagination: {
@@ -79,19 +76,15 @@ export async function GET(req: NextRequest) {
             limit,
             pages: 0,
           },
-        })
+        });
       }
-
       // Get all vehicles for these customers
       const vehicles = await db
         .collection("vehicles")
         .find({ customerId: { $in: customerIds } })
-        .toArray()
-
-      const vehicleIds = vehicles.map((vehicle) => vehicle._id.toString())
-
+        .toArray();
+      const vehicleIds = vehicles.map((vehicle) => vehicle._id.toString());
       if (vehicleIds.length === 0) {
-        // If no vehicles found, return empty array
         return NextResponse.json({
           services: [],
           pagination: {
@@ -100,11 +93,10 @@ export async function GET(req: NextRequest) {
             limit,
             pages: 0,
           },
-        })
+        });
       }
-
       // Add vehicle filter to query
-      query.vehicleId = { $in: vehicleIds }
+      query.vehicleId = { $in: vehicleIds };
     }
 
     // Get services from the database

@@ -14,12 +14,6 @@ if (!getApps().length) {
   })
 }
 
-interface CustomerDocument {
-  _id: ObjectId
-  userId: string
-  // Add other fields as needed
-}
-
 interface VehicleDocument extends Omit<Vehicle, "id"> {
   _id: ObjectId
   customerId: string
@@ -80,15 +74,11 @@ export async function GET(request: NextRequest) {
     // If customerId is provided, filter by that specific customer
     if (customerId && ObjectId.isValid(customerId)) {
       query.customerId = customerId
-    }
-    // For client users, only return vehicles associated with their customer records
-    else if (decodedToken.role === "client") {
-      // First, get the customer associated with this user
-      const customer = await db.collection("customers").findOne({ userId: decodedToken.uid }) as CustomerDocument | null
-      console.log("Found customer for user:", decodedToken.uid, customer)
-
-      if (!customer) {
-        console.log("No customer found for user:", decodedToken.uid)
+    } else if (["admin", "worker", "client"].includes(decodedToken.role)) {
+      // Get all customers created by this user
+      const customers = await db.collection("customers").find({ userId: decodedToken.uid }).toArray();
+      const customerIds = customers.map((customer) => customer._id.toString());
+      if (customerIds.length === 0) {
         return NextResponse.json({
           vehicles: [],
           pagination: {
@@ -97,15 +87,9 @@ export async function GET(request: NextRequest) {
             limit,
             pages: 0,
           },
-        })
+        });
       }
-
-      // Get the customer ID as a string
-      const customerId = customer._id.toString()
-      console.log("Filtering vehicles for customer ID:", customerId)
-
-      // Add customer filter to query - exact match on customerId
-      query.customerId = customerId
+      query.customerId = { $in: customerIds };
     }
 
     // Get vehicles from the database

@@ -73,8 +73,8 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    // For client users, only return their own data
-    if (decodedToken.role === "client") {
+    // For admin, worker, or client users, only return their own data
+    if (["admin", "worker", "client"].includes(decodedToken.role)) {
       query.userId = decodedToken.uid
     }
 
